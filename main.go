@@ -191,11 +191,21 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 			"http_large_request_detection":   httpLargeRequestDetection,
 		},
 	}
+	wadThreshold := int(wad["threshold"].(float64))
+	dgaThreshold := int(dgad["threshold"].(float64))
+	var action string
+	if webAttackDetectionScore >= float64(wadThreshold) || DGADetectionScore >= float64(dgaThreshold) ||
+		crossSiteScriptingDetection || sqlInjectionDetection || httpVerbTamperingDetection || httpLargeRequestDetection {
+		action = "BLOCK"
+	} else {
+		action = "ALLOW"
+	}
 
 	response := shared.GWResponseBody{
 		Status:             "success",
 		Message:            "Request processed successfully",
 		Data:               mapData,
+		AgentAction:        action,
 		EventInfo:          eventInfo,
 		RequestCreatedAt:   req.RequestCreatedAt,
 		RequestProcessedAt: time.Now().Format(time.RFC3339),
@@ -216,6 +226,7 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 			"event_info":           eventInfo,
 			"event_id":             eventID,
 			"type":                 "AGENT_EVENT",
+			"agent_action":         action,
 			"request_created_at":   req.RequestCreatedAt,
 			"request_processed_at": time.Now().Format(time.RFC3339),
 			"title":                "Received request from agent",

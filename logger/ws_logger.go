@@ -33,6 +33,7 @@ type (
 		Level              string `json:"level"`
 		EventID            string `json:"event_id"`
 		Type               string `json:"type"`
+		AgentAction        string `json:"agent_action"`
 		RequestCreatedAt   int64  `json:"request_created_at"`
 		RequestProcessedAt int64  `json:"request_processed_at"`
 		Title              string `json:"title"`
