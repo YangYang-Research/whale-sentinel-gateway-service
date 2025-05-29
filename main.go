@@ -69,18 +69,19 @@ func handlerRedis(key string, value string) (string, error) {
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"msg": err,
-			}).Error("Error getting value from Redis")
+				"key": key,
+			}).Error("Cannot GET - Not found key in Redis")
 		}
-		return val, nil
+		return val, err
 	} else {
 		// Set value in Redis
 		err := redisClient.Set(ctx, key, value, 0).Err()
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"msg": err,
-			}).Error("Error setting value in Redis")
+			}).Error("Cannot SET - Cannot setting value in Redis")
 		}
-		return key, nil
+		return value, err
 	}
 }
 
@@ -104,11 +105,15 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 
 	eventInfo, eventID := helper.GenerateGWEventInfo(req)
 
-	agentProfile, err := processAgentProfile(req.AgentID, "")
+	agentProfile, err := processAgentProfile(req.AgentID, "", eventInfo)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"msg": err,
 		}).Error("Error processing Agent Profile")
+	}
+
+	if agentProfile == "" {
+
 	}
 
 	var agent shared.AgentProfileRaw
@@ -258,7 +263,7 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 
 	eventInfo, eventID := helper.GenerateACEventInfo(req)
 
-	agentProfile, err := processAgentProfile(req.AgentID, "")
+	agentProfile, err := processAgentProfile(req.AgentID, "", eventInfo)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"msg": err,
@@ -267,11 +272,47 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if agentProfile == "" {
+		response := shared.APResponseBody{
+			Status:             "success",
+			Message:            "Request processed successfully",
+			Profile:            shared.AgentProfile{},
+			EventInfo:          eventInfo,
+			RequestCreatedAt:   req.RequestCreatedAt,
+			RequestProcessedAt: time.Now().Format(time.RFC3339),
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+		// Log the request to the logg collector
+		go func(agentID string, eventInfo string, rawRequest string) {
+			// Log the request to the log collector
+			logData := map[string]interface{}{
+				"name":                 "ws-gateway-service",
+				"agent_id":             agentID,
+				"agent_running_mode":   "",
+				"source":               agentID,
+				"destination":          "ws-gateway-service",
+				"event_info":           eventInfo,
+				"event_id":             eventID,
+				"type":                 "AGENT_EVENT",
+				"request_created_at":   req.RequestCreatedAt,
+				"request_processed_at": time.Now().Format(time.RFC3339),
+				"title":                "Received request from agent",
+				"raw_request":          rawRequest,
+				"timestamp":            time.Now().Format(time.RFC3339),
+			}
+
+			logger.Log("INFO", "ws-gateway-service", logData)
+		}(req.AgentID, eventInfo, (req.AgentID))
+		return
+	}
+
 	var agent shared.AgentProfileRaw
 
 	err = json.Unmarshal([]byte(agentProfile), &agent)
 	if err != nil {
-		log.WithField("msg", err).Error("Failed to parse agent configuration from Redis")
+		log.WithField("msg", err).Error("Failed to parse agent configuration from Redis / ws-configuration-service")
 		http.Error(w, "Whale Sentinel - Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -363,7 +404,7 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 
 	eventInfo, eventID := helper.GenerateASEventInfo(req)
 
-	agentProfileStr, err := processAgentProfile(req.AgentID, "")
+	agentProfileStr, err := processAgentProfile(req.AgentID, "", eventInfo)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"msg": err,
@@ -393,7 +434,7 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updateProfifle, err := processAgentProfile(req.AgentID, string(updatedJson))
+	updateProfifle, err := processAgentProfile(req.AgentID, string(updatedJson), eventInfo)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"msg": err,
@@ -683,21 +724,40 @@ func processDGADetection(req shared.GWRequestBody, eventInfo string, _ map[strin
 	return score, nil
 }
 
-func processAgentProfile(agentId string, agentValue string) (string, error) {
-	agentProfile, err := handlerRedis(agentId, agentValue)
+func processAgentProfile(agentId string, agentValue string, eventInfo string) (string, error) {
+	getAgentProfile, err := handlerRedis(agentId, agentValue)
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"msg": err,
-		}).Error("Error getting value from Redis")
+		log.Info("Cannot getting agent profile from Redis. Let getting agent profile from ws-configuration-service")
 	}
 
-	// 2. If not found in cache or failed to parse → call ws-configuration
-	if agentProfile == "" {
+	if getAgentProfile == "" {
+		requestBody := map[string]interface{}{
+			"event_info": eventInfo,
+			"payload": map[string]interface{}{
+				"data": map[string]interface{}{
+					"type": "agent",
+					"key":  agentId,
+				},
+			},
+			"request_created_at": time.Now().Format(time.RFC3339),
+		}
+		responseData, err := makeHTTPRequest(os.Getenv("WS_MODULE_CONFIGURATION_SERVICE_URL"), os.Getenv("WS_MODULE_CONFIGURATION_SERVICE_ENDPOINT"), requestBody)
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"msg": err,
+			}).Error("Error calling WS Module Configuration Service")
+			return "", fmt.Errorf("failed to call WS Module Configuration Service: %v", err)
+		}
 
+		var response map[string]interface{}
+		if err := json.Unmarshal(responseData, &response); err != nil {
+			return "", fmt.Errorf("failed to parse response data: %v", err)
+		}
+
+		data := response["profile"]
+		return data.(string), nil
 	}
-
-	return agentProfile, nil
-
+	return getAgentProfile, nil
 }
 
 // getAPIKey retrieves the API key based on the configuration
