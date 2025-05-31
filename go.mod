@@ -1,4 +1,4 @@
-module github.com/YangYang-Research/whale-sentinel-services/ws-gateway-service
+module github.com/YangYang-Research/whale-sentinel-services/whale-sentinel-gateway-service
 
 go 1.24.0
 
