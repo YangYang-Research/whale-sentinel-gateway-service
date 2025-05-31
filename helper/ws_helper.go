@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/YangYang-Research/whale-sentinel-services/ws-gateway-service/shared"
+	"github.com/YangYang-Research/whale-sentinel-services/whale-sentinel-gateway-service/shared"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go/aws"

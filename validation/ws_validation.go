@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/YangYang-Research/whale-sentinel-services/ws-gateway-service/shared"
+	"github.com/YangYang-Research/whale-sentinel-services/whale-sentinel-gateway-service/shared"
 )
 
 // Helper functions
