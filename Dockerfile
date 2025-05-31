@@ -8,12 +8,12 @@ WORKDIR /app
 COPY . .
 
 # Install dependencies (if needed)
-WORKDIR /app/ws-gateway-service
+WORKDIR /app/whale-sentinel-gateway-service
 
 RUN go mod tidy
 
 # Build the Go application
-RUN go build -o ws-gateway-service .
+RUN go build -o whale-sentinel-gateway-service .
 
 # Second Stage: Nginx + Self-Signed SSL + Go App
 FROM nginx:stable-alpine
@@ -30,13 +30,13 @@ RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -subj "/CN=localhost"
 
 # Copy the Go application from the builder stage
-COPY --from=builder /app/ws-gateway-service /usr/local/bin/
+COPY --from=builder /app/whale-sentinel-gateway-service /usr/local/bin/
 
 # Copy custom Nginx config to enable HTTPS and proxy to the Go app
-COPY --from=builder /app/ws-gateway-service/nginx.conf /etc/nginx/nginx.conf
+COPY --from=builder /app/whale-sentinel-gateway-service/nginx.conf /etc/nginx/nginx.conf
 
 # Expose HTTPS port
 EXPOSE 443
 
 # Command to run both Nginx and Go app
-CMD ["sh", "-c", "nginx && /usr/local/bin/ws-gateway-service"]
+CMD ["sh", "-c", "nginx && /usr/local/bin/whale-sentinel-gateway-service"]
