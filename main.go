@@ -219,6 +219,7 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 
+	log.Infof("POST %v - 200", r.URL)
 	// Log the request to the logg collector
 	go func(agentID string, eventInfo string, rawRequest string) {
 		// Log the request to the log collector
@@ -284,18 +285,21 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
+
+		log.Infof("POST %v - 200", r.URL)
 		// Log the request to the logg collector
 		go func(agentID string, eventInfo string, rawRequest string) {
 			// Log the request to the log collector
 			logData := map[string]interface{}{
 				"name":                 "ws-gateway-service",
 				"agent_id":             agentID,
-				"agent_running_mode":   "",
+				"agent_running_mode":   "N/A",
 				"source":               agentID,
 				"destination":          "ws-gateway-service",
 				"event_info":           eventInfo,
 				"event_id":             eventID,
 				"type":                 "AGENT_EVENT",
+				"agent_action":         "GET_PROFILE",
 				"request_created_at":   req.RequestCreatedAt,
 				"request_processed_at": time.Now().Format(time.RFC3339),
 				"title":                "Received request from agent",
@@ -361,6 +365,7 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 
+	log.Infof("POST %v - 200", r.URL)
 	// Log the request to the logg collector
 	go func(agentID string, eventInfo string, rawRequest string) {
 		// Log the request to the log collector
@@ -373,6 +378,7 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 			"event_info":           eventInfo,
 			"event_id":             eventID,
 			"type":                 "AGENT_EVENT",
+			"agent_action":         "GET_PROFILE",
 			"request_created_at":   req.RequestCreatedAt,
 			"request_processed_at": time.Now().Format(time.RFC3339),
 			"title":                "Received request from agent",
@@ -455,6 +461,7 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 
+	log.Infof("POST %v - 200", r.URL)
 	// Log the request to the logg collector
 	go func(agentID string, eventInfo string, rawRequest string) {
 		// Log the request to the log collector
@@ -467,6 +474,7 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 			"event_info":           eventInfo,
 			"event_id":             eventID,
 			"type":                 "AGENT_EVENT",
+			"agent_action":         "SYNC_PROFILE",
 			"request_created_at":   req.RequestCreatedAt,
 			"request_processed_at": time.Now().Format(time.RFC3339),
 			"title":                "Received request from agent",
@@ -511,7 +519,9 @@ func makeHTTPRequest(url, endpoint string, body interface{}) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
+	log.Infof("POST %v - %v", url+endpoint, resp.StatusCode)
 	return io.ReadAll(resp.Body)
+
 }
 
 func processWebAttackDetection(req shared.GWRequestBody, eventInfo string, wad map[string]interface{}) (float64, error) {

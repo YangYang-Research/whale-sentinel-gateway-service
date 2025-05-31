@@ -127,6 +127,7 @@ func Log(level string, service_name string, log_data map[string]interface{}) {
 			Level:              strings.ToUpper(level),
 			EventID:            log_data["event_id"].(string),
 			Type:               log_data["type"].(string),
+			AgentAction:        log_data["agent_action"].(string),
 			RequestCreatedAt:   toUnixTime(log_data["request_created_at"]),
 			RequestProcessedAt: toUnixTime(log_data["request_processed_at"]),
 			Title:              log_data["title"].(string),
