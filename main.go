@@ -496,7 +496,7 @@ func makeHTTPRequest(url, endpoint string, body interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get API key: %v", err)
 	}
-
+	log.Infof("DEBUG : %v", body)
 	req, err := http.NewRequest("POST", url+endpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
