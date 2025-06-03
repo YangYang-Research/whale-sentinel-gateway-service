@@ -1,17 +1,17 @@
 package shared
 
 type (
-	GWRequestBody struct {
-		AgentID          string    `json:"agent_id"`
-		GWPayload        GWPayload `json:"payload"`
-		RequestCreatedAt string    `json:"request_created_at"`
+	GW_RequestBody struct {
+		AgentID          string     `json:"agent_id"`
+		GW_Payload       GW_Payload `json:"payload"`
+		RequestCreatedAt string     `json:"request_created_at"`
 	}
 
-	GWPayload struct {
-		GWData GWData `json:"data"`
+	GW_Payload struct {
+		GW_Data GW_Data `json:"data"`
 	}
 
-	GWData struct {
+	GW_Data struct {
 		ClientInformation ClientInformation `json:"client_information"`
 		HTTPRequest       HTTPRequest       `json:"http_request"`
 	}
@@ -41,7 +41,7 @@ type (
 		Referer       string `json:"referer"`
 	}
 
-	APRequestBody struct {
+	AP_RequestBody struct {
 		AgentID          string `json:"agent_id"`
 		RequestCreatedAt string `json:"request_created_at"`
 	}
@@ -50,29 +50,52 @@ type (
 		Profile map[string]interface{} `json:"profile"`
 	}
 
-	GWResponseBody struct {
-		Status             string         `json:"status"`
-		Message            string         `json:"message"`
-		Data               GWResponseData `json:"data"`
-		AgentAction        string         `json:"agent_action"`
-		EventInfo          string         `json:"event_info"`
-		RequestCreatedAt   string         `json:"request_created_at"`
-		RequestProcessedAt string         `json:"request_processed_at"`
+	GW_ResponseBody struct {
+		Status             string          `json:"status"`
+		Message            string          `json:"message"`
+		GW_ResponseData    GW_ResponseData `json:"data"`
+		AgentAction        string          `json:"agent_action"`
+		EventInfo          string          `json:"event_info"`
+		RequestCreatedAt   string          `json:"request_created_at"`
+		RequestProcessedAt string          `json:"request_processed_at"`
 	}
 
-	GWResponseData struct {
+	GW_ResponseData struct {
 		WebAttackDetectionScore float64         `json:"ws_module_web_attack_detection_score"`
 		DGADetectionScore       float64         `json:"ws_module_dga_detection_score"`
 		CommonAttackDetection   map[string]bool `json:"ws_module_common_attack_detection"`
 	}
 
-	APResponseBody struct {
-		Status             string       `json:"status"`
-		Message            string       `json:"message"`
-		Profile            AgentProfile `json:"profile"`
-		EventInfo          string       `json:"event_info"`
-		RequestCreatedAt   string       `json:"request_created_at"`
-		RequestProcessedAt string       `json:"request_processed_at"`
+	AP_ResponseBody struct {
+		Status             string          `json:"status"`
+		Message            string          `json:"message"`
+		AP_ResponseData    AP_ResponseData `json:"data"`
+		EventInfo          string          `json:"event_info"`
+		RequestCreatedAt   string          `json:"request_created_at"`
+		RequestProcessedAt string          `json:"request_processed_at"`
+	}
+
+	AP_ResponseData struct {
+		AgentProfile AgentProfile `json:"profile"`
+	}
+
+	AS_RequestBody struct {
+		AgentID          string                 `json:"agent_id"`
+		AS_Profile       map[string]interface{} `json:"profile"`
+		RequestCreatedAt string                 `json:"request_created_at"`
+	}
+
+	AS_ResponseBody struct {
+		Status             string          `json:"status"`
+		Message            string          `json:"message"`
+		AS_ResponseData    AS_ResponseData `json:"data"`
+		EventInfo          string          `json:"event_info"`
+		RequestCreatedAt   string          `json:"request_created_at"`
+		RequestProcessedAt string          `json:"request_processed_at"`
+	}
+
+	AS_ResponseData struct {
+		AgentProfile AgentProfile `json:"profile"`
 	}
 
 	AgentProfile struct {
@@ -108,21 +131,6 @@ type (
 	SecureResponseHeaderConfig struct {
 		Enable        bool                   `json:"enable"`
 		SecureHeaders map[string]interface{} `json:"headers"`
-	}
-
-	ASRequestBody struct {
-		AgentID          string                 `json:"agent_id"`
-		ASPayload        map[string]interface{} `json:"payload"`
-		RequestCreatedAt string                 `json:"request_created_at"`
-	}
-
-	ASResponseBody struct {
-		Status             string `json:"status"`
-		Message            string `json:"message"`
-		Profile            string `json:"profile"`
-		EventInfo          string `json:"event_info"`
-		RequestCreatedAt   string `json:"request_created_at"`
-		RequestProcessedAt string `json:"request_processed_at"`
 	}
 
 	ErrorResponse struct {

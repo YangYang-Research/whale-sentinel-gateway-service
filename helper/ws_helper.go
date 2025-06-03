@@ -62,21 +62,21 @@ func GetDomain(fullUrl string) (string, error) {
 	return parsedUrl.Host, nil
 }
 
-func GenerateGWEventInfo(req shared.GWRequestBody) (string, string) {
-	hashInput := req.RequestCreatedAt + req.GWPayload.GWData.ClientInformation.IP + req.GWPayload.GWData.ClientInformation.DeviceType + req.GWPayload.GWData.HTTPRequest.Method + req.GWPayload.GWData.HTTPRequest.Host + req.GWPayload.GWData.HTTPRequest.QueryParams + req.GWPayload.GWData.HTTPRequest.Body
+func GenerateGWEventInfo(req shared.GW_RequestBody) (string, string) {
+	hashInput := req.RequestCreatedAt + req.GW_Payload.GW_Data.ClientInformation.IP + req.GW_Payload.GW_Data.ClientInformation.DeviceType + req.GW_Payload.GW_Data.HTTPRequest.Method + req.GW_Payload.GW_Data.HTTPRequest.Host + req.GW_Payload.GW_Data.HTTPRequest.QueryParams + req.GW_Payload.GW_Data.HTTPRequest.Body
 	eventID := sha256.Sum256([]byte(hashInput))
 	eventInfo := req.AgentID + "|" + "WS_GATEWAY_SERVICE" + "|" + hex.EncodeToString(eventID[:])
 	return eventInfo, hex.EncodeToString(eventID[:])
 }
 
-func GenerateACEventInfo(req shared.APRequestBody) (string, string) {
+func GenerateACEventInfo(req shared.AP_RequestBody) (string, string) {
 	hashInput := req.RequestCreatedAt + req.AgentID
 	eventID := sha256.Sum256([]byte(hashInput))
 	eventInfo := req.AgentID + "|" + "WS_GATEWAY_SERVICE" + "|" + hex.EncodeToString(eventID[:])
 	return eventInfo, hex.EncodeToString(eventID[:])
 }
 
-func GenerateASEventInfo(req shared.ASRequestBody) (string, string) {
+func GenerateASEventInfo(req shared.AS_RequestBody) (string, string) {
 	hashInput := req.RequestCreatedAt + req.AgentID
 	eventID := sha256.Sum256([]byte(hashInput))
 	eventInfo := req.AgentID + "|" + "WS_GATEWAY_SERVICE" + "|" + hex.EncodeToString(eventID[:])

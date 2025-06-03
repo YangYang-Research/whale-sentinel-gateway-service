@@ -9,8 +9,8 @@ import (
 )
 
 // Helper functions
-func ValidateGWRequest(req shared.GWRequestBody) error {
-	if req.GWPayload.GWData.ClientInformation.IP == "" || req.GWPayload.GWData.HTTPRequest.Method == "" || req.GWPayload.GWData.HTTPRequest.URL == "" || req.GWPayload.GWData.HTTPRequest.Headers.UserAgent == "" || req.GWPayload.GWData.HTTPRequest.Headers.ContentType == "" {
+func ValidateGW_Request(req shared.GW_RequestBody) error {
+	if req.GW_Payload.GW_Data.ClientInformation.IP == "" || req.GW_Payload.GW_Data.HTTPRequest.Method == "" || req.GW_Payload.GW_Data.HTTPRequest.URL == "" || req.GW_Payload.GW_Data.HTTPRequest.Headers.UserAgent == "" || req.GW_Payload.GW_Data.HTTPRequest.Headers.ContentType == "" {
 		return fmt.Errorf("missing required fields")
 	}
 
@@ -24,7 +24,7 @@ func ValidateGWRequest(req shared.GWRequestBody) error {
 	return nil
 }
 
-func ValidateACRequest(req shared.APRequestBody) error {
+func ValidateAP_Request(req shared.AP_RequestBody) error {
 	if req.AgentID == "" {
 		return fmt.Errorf("missing required fields")
 	}
@@ -39,7 +39,7 @@ func ValidateACRequest(req shared.APRequestBody) error {
 	return nil
 }
 
-func ValidateASRequest(req shared.ASRequestBody) error {
+func ValidateAS_Request(req shared.AS_RequestBody) error {
 	if req.AgentID == "" {
 		return fmt.Errorf("missing required fields")
 	}
@@ -48,7 +48,7 @@ func ValidateASRequest(req shared.ASRequestBody) error {
 		return fmt.Errorf("invalid AgentID format")
 	}
 
-	if req.ASPayload == nil {
+	if req.AS_Profile == nil {
 		return fmt.Errorf("missing payload")
 	}
 

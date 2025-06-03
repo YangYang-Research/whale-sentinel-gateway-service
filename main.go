@@ -92,28 +92,44 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req shared.GWRequestBody
+	var req shared.GW_RequestBody
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		helper.SendErrorResponse(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	if err := validation.ValidateGWRequest(req); err != nil {
+	if err := validation.ValidateGW_Request(req); err != nil {
 		helper.SendErrorResponse(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	eventInfo, eventID := helper.GenerateGWEventInfo(req)
 
-	agentProfile, err := processAgentProfile(req.AgentID, "", eventInfo)
+	var (
+		status string
+	)
+
+	status, agentProfile, err := processAgentProfile(req.AgentID, "", eventInfo)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"msg": err,
-		}).Error("Error processing Agent Profile")
+		}).Error("Failed to retrieve profile")
+		return
 	}
 
-	if agentProfile == "" {
-
+	if status != "Success" {
+		response := shared.GW_ResponseBody{
+			Status:             status,
+			Message:            "Failed to retrieve profile",
+			GW_ResponseData:    shared.GW_ResponseData{},
+			AgentAction:        "ALLOW",
+			EventInfo:          eventInfo,
+			RequestCreatedAt:   req.RequestCreatedAt,
+			RequestProcessedAt: time.Now().UTC().Format("2006-01-02T15:04:05Z"),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+		return
 	}
 
 	var agent shared.AgentProfileRaw
@@ -186,7 +202,7 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 		}).Error("Error processing DGA Detection")
 	}
 
-	mapData := shared.GWResponseData{
+	mapData := shared.GW_ResponseData{
 		WebAttackDetectionScore: webAttackDetectionScore,
 		DGADetectionScore:       DGADetectionScore,
 		CommonAttackDetection: map[string]bool{
@@ -206,14 +222,14 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 		action = "ALLOW"
 	}
 
-	response := shared.GWResponseBody{
+	response := shared.GW_ResponseBody{
 		Status:             "success",
 		Message:            "Request processed successfully",
-		Data:               mapData,
+		GW_ResponseData:    mapData,
 		AgentAction:        action,
 		EventInfo:          eventInfo,
 		RequestCreatedAt:   req.RequestCreatedAt,
-		RequestProcessedAt: time.Now().Format(time.RFC3339),
+		RequestProcessedAt: time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -234,14 +250,14 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 			"type":                 "AGENT_EVENT",
 			"agent_action":         action,
 			"request_created_at":   req.RequestCreatedAt,
-			"request_processed_at": time.Now().Format(time.RFC3339),
+			"request_processed_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 			"title":                "Received request from agent",
 			"raw_request":          rawRequest,
-			"timestamp":            time.Now().Format(time.RFC3339),
+			"timestamp":            time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 		}
 
 		logger.Log("INFO", "ws-gateway-service", logData)
-	}(req.AgentID, eventInfo, (req.GWPayload.GWData.HTTPRequest.QueryParams + req.GWPayload.GWData.HTTPRequest.Body))
+	}(req.AgentID, eventInfo, (req.GW_Payload.GW_Data.HTTPRequest.QueryParams + req.GW_Payload.GW_Data.HTTPRequest.Body))
 }
 
 // HandleAgentProfile processes incoming requests for agent profile
@@ -251,36 +267,49 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req shared.APRequestBody
+	var req shared.AP_RequestBody
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		helper.SendErrorResponse(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	if err := validation.ValidateACRequest(req); err != nil {
+	if err := validation.ValidateAP_Request(req); err != nil {
 		helper.SendErrorResponse(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	eventInfo, eventID := helper.GenerateACEventInfo(req)
 
-	agentProfile, err := processAgentProfile(req.AgentID, "", eventInfo)
+	var (
+		status  string
+		message string
+	)
+
+	status, agentProfile, err := processAgentProfile(req.AgentID, "", eventInfo)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"msg": err,
-		}).Error("Error processing Agent Configuration")
+		}).Error("Error processing Agent Profile")
 		http.Error(w, "Whale Sentinel - Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
+	if status == "Success" {
+		message = "Profile retrieved successfully"
+	} else {
+		message = "Failed to retrieve profile"
+	}
+
 	if agentProfile == "" {
-		response := shared.APResponseBody{
-			Status:             "success",
-			Message:            "Request processed successfully",
-			Profile:            shared.AgentProfile{},
+		response := shared.AP_ResponseBody{
+			Status:  status,
+			Message: message,
+			AP_ResponseData: shared.AP_ResponseData{
+				AgentProfile: shared.AgentProfile{},
+			},
 			EventInfo:          eventInfo,
 			RequestCreatedAt:   req.RequestCreatedAt,
-			RequestProcessedAt: time.Now().Format(time.RFC3339),
+			RequestProcessedAt: time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -301,10 +330,10 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 				"type":                 "AGENT_EVENT",
 				"agent_action":         "GET_PROFILE",
 				"request_created_at":   req.RequestCreatedAt,
-				"request_processed_at": time.Now().Format(time.RFC3339),
+				"request_processed_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 				"title":                "Received request from agent",
 				"raw_request":          rawRequest,
-				"timestamp":            time.Now().Format(time.RFC3339),
+				"timestamp":            time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 			}
 
 			logger.Log("INFO", "ws-gateway-service", logData)
@@ -316,7 +345,7 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 
 	err = json.Unmarshal([]byte(agentProfile), &agent)
 	if err != nil {
-		log.WithField("msg", err).Error("Failed to parse agent configuration from Redis / ws-configuration-service")
+		log.WithField("msg", err).Error("Failed to parse agent profile from Redis / ws-configuration-service")
 		http.Error(w, "Whale Sentinel - Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -353,13 +382,15 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	response := shared.APResponseBody{
-		Status:             "success",
-		Message:            "Request processed successfully",
-		Profile:            mapData,
+	response := shared.AP_ResponseBody{
+		Status:  status,
+		Message: message,
+		AP_ResponseData: shared.AP_ResponseData{
+			AgentProfile: mapData,
+		},
 		EventInfo:          eventInfo,
 		RequestCreatedAt:   req.RequestCreatedAt,
-		RequestProcessedAt: time.Now().Format(time.RFC3339),
+		RequestProcessedAt: time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -380,10 +411,10 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 			"type":                 "AGENT_EVENT",
 			"agent_action":         "GET_PROFILE",
 			"request_created_at":   req.RequestCreatedAt,
-			"request_processed_at": time.Now().Format(time.RFC3339),
+			"request_processed_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 			"title":                "Received request from agent",
 			"raw_request":          rawRequest,
-			"timestamp":            time.Now().Format(time.RFC3339),
+			"timestamp":            time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 		}
 
 		logger.Log("INFO", "ws-gateway-service", logData)
@@ -397,65 +428,130 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req shared.ASRequestBody
+	var req shared.AS_RequestBody
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		helper.SendErrorResponse(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	if err := validation.ValidateASRequest(req); err != nil {
+	if err := validation.ValidateAS_Request(req); err != nil {
 		helper.SendErrorResponse(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	eventInfo, eventID := helper.GenerateASEventInfo(req)
 
-	agentProfileStr, err := processAgentProfile(req.AgentID, "", eventInfo)
+	var (
+		status  string
+		message string
+	)
+
+	status, agentProfile, err := processAgentSynchronize(req, eventInfo)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"msg": err,
-		}).Error("Error processing Agent Configuration")
+		}).Error("Error processing Agent Synchronize")
 		http.Error(w, "Whale Sentinel - Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	var agentProfile map[string]map[string]interface{}
-	json.Unmarshal([]byte(agentProfileStr), &agentProfile)
+	if status == "Success" {
+		message = "Profile retrieved successfully"
+	} else {
+		message = "Failed to retrieve profile"
+	}
 
-	requestPayload := req.ASPayload
-	profile := agentProfile["profile"]
-
-	for k, v := range requestPayload {
-		if _, exists := profile[k]; exists {
-			profile[k] = v
+	if agentProfile == "" {
+		response := shared.AS_ResponseBody{
+			Status:  status,
+			Message: message,
+			AS_ResponseData: shared.AS_ResponseData{
+				AgentProfile: shared.AgentProfile{},
+			},
+			EventInfo:          eventInfo,
+			RequestCreatedAt:   req.RequestCreatedAt,
+			RequestProcessedAt: time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+
+		log.Infof("POST %v - 200", r.URL)
+		// Log the request to the logg collector
+		go func(agentID string, eventInfo string, rawRequest string) {
+			// Log the request to the log collector
+			logData := map[string]interface{}{
+				"name":                 "ws-gateway-service",
+				"agent_id":             agentID,
+				"agent_running_mode":   "N/A",
+				"source":               agentID,
+				"destination":          "ws-gateway-service",
+				"event_info":           eventInfo,
+				"event_id":             eventID,
+				"type":                 "AGENT_EVENT",
+				"agent_action":         "SYNC_PROFILE",
+				"request_created_at":   req.RequestCreatedAt,
+				"request_processed_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
+				"title":                "Received request from agent",
+				"raw_request":          rawRequest,
+				"timestamp":            time.Now().UTC().Format("2006-01-02T15:04:05Z"),
+			}
+
+			logger.Log("INFO", "ws-gateway-service", logData)
+		}(req.AgentID, eventInfo, (req.AgentID))
+		return
 	}
 
-	updatedJson, err := json.Marshal(agentProfile)
+	var agent shared.AgentProfileRaw
+
+	err = json.Unmarshal([]byte(agentProfile), &agent)
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"msg": err,
-		}).Error("Error marshalling updated agent profile")
+		log.WithField("msg", err).Error("Failed to parse agent profile from Redis / ws-configuration-service")
 		http.Error(w, "Whale Sentinel - Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	updateProfifle, err := processAgentProfile(req.AgentID, string(updatedJson), eventInfo)
-	if err != nil {
-		log.WithFields(logrus.Fields{
-			"msg": err,
-		}).Error("Error updating Agent Profile")
-		http.Error(w, "Whale Sentinel - Internal Server Error", http.StatusInternalServerError)
-		return
+	wad := agent.Profile["ws_module_web_attack_detection"].(map[string]interface{})
+	dgad := agent.Profile["ws_module_dga_detection"].(map[string]interface{})
+	cad := agent.Profile["ws_module_common_attack_detection"].(map[string]interface{})
+	srh := agent.Profile["secure_response_headers"].(map[string]interface{})
+
+	mapData := shared.AgentProfile{
+		RunningMode:                   agent.Profile["running_mode"].(string),
+		LastRunMode:                   agent.Profile["last_run_mode"].(string),
+		LiteModeDataIsSynchronized:    agent.Profile["lite_mode_data_is_synchronized"].(bool),
+		LiteModeDataSynchronizeStatus: agent.Profile["lite_mode_data_synchronize_status"].(string),
+		WebAttackDetection: shared.WebAttackDetectionConfig{
+			Enable:       wad["enable"].(bool),
+			DetectHeader: wad["detect_header"].(bool),
+			Threshold:    int(wad["threshold"].(float64)),
+		},
+		DGADetection: shared.DGADetectionConfig{
+			Enable:    dgad["enable"].(bool),
+			Threshold: int(dgad["threshold"].(float64)),
+		},
+		CommonAttackDetection: shared.CommonAttackDetectionConfig{
+			Enable:                   cad["enable"].(bool),
+			DetectCrossSiteScripting: cad["detect_cross_site_scripting"].(bool),
+			DetectSqlInjection:       cad["detect_sql_injection"].(bool),
+			DetectHTTPVerbTampering:  cad["detect_http_verb_tampering"].(bool),
+			DetectHTTPLargeRequest:   cad["detect_http_large_request"].(bool),
+		},
+		SecureResponseHeaders: shared.SecureResponseHeaderConfig{
+			Enable:        srh["enable"].(bool),
+			SecureHeaders: srh["headers"].(map[string]interface{}),
+		},
 	}
 
-	response := shared.ASResponseBody{
-		Status:             "success",
-		Message:            "Request processed successfully",
-		Profile:            updateProfifle,
+	response := shared.AS_ResponseBody{
+		Status:  status,
+		Message: message,
+		AS_ResponseData: shared.AS_ResponseData{
+			AgentProfile: mapData,
+		},
 		EventInfo:          eventInfo,
 		RequestCreatedAt:   req.RequestCreatedAt,
-		RequestProcessedAt: time.Now().Format(time.RFC3339),
+		RequestProcessedAt: time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -468,7 +564,7 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 		logData := map[string]interface{}{
 			"name":                 "ws-gateway-service",
 			"agent_id":             agentID,
-			"agent_running_mode":   profile["running_mode"].(string),
+			"agent_running_mode":   agent.Profile["running_mode"].(string),
 			"source":               agentID,
 			"destination":          "ws-gateway-service",
 			"event_info":           eventInfo,
@@ -476,10 +572,10 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 			"type":                 "AGENT_EVENT",
 			"agent_action":         "SYNC_PROFILE",
 			"request_created_at":   req.RequestCreatedAt,
-			"request_processed_at": time.Now().Format(time.RFC3339),
+			"request_processed_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 			"title":                "Received request from agent",
 			"raw_request":          rawRequest,
-			"timestamp":            time.Now().Format(time.RFC3339),
+			"timestamp":            time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 		}
 
 		logger.Log("INFO", "ws-gateway-service", logData)
@@ -524,12 +620,12 @@ func makeHTTPRequest(url, endpoint string, body interface{}) ([]byte, error) {
 
 }
 
-func processWebAttackDetection(req shared.GWRequestBody, eventInfo string, wad map[string]interface{}) (float64, error) {
+func processWebAttackDetection(req shared.GW_RequestBody, eventInfo string, wad map[string]interface{}) (float64, error) {
 	log.WithFields(logrus.Fields{
 		"msg": "Event Info: " + eventInfo,
 	}).Debug("Processing Web Attack Detection")
 
-	httpRequest := req.GWPayload.GWData.HTTPRequest
+	httpRequest := req.GW_Payload.GW_Data.HTTPRequest
 	var concatenatedData string
 	if wad["detect_header"].(bool) {
 		concatenatedData = fmt.Sprintf("%s %s \n Host: %s \n User-Agent: %s \n Content-Type: %s \n Content-Length: %d \n\n %s%s",
@@ -543,7 +639,7 @@ func processWebAttackDetection(req shared.GWRequestBody, eventInfo string, wad m
 	requestBody := map[string]interface{}{
 		"event_info":         eventInfo,
 		"payload":            concatenatedData,
-		"request_created_at": time.Now().Format(time.RFC3339),
+		"request_created_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 	}
 
 	responseData, err := makeHTTPRequest(os.Getenv("WS_MODULE_WEB_ATTACK_DETECTION_URL"), os.Getenv("WS_MODULE_WEB_ATTACK_DETECTION_ENDPOINT"), requestBody)
@@ -601,7 +697,7 @@ func processWebAttackDetection(req shared.GWRequestBody, eventInfo string, wad m
 	return score, nil
 }
 
-func processCommonAttackDetection(req shared.GWRequestBody, eventInfo string, _ map[string]interface{}) (bool, bool, bool, bool, error) {
+func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _ map[string]interface{}) (bool, bool, bool, bool, error) {
 	log.WithFields(logrus.Fields{
 		"msg": "Event Info: " + eventInfo,
 	}).Debug("Processing Common Attack Detection")
@@ -612,29 +708,29 @@ func processCommonAttackDetection(req shared.GWRequestBody, eventInfo string, _ 
 		"payload": map[string]interface{}{
 			"data": map[string]interface{}{
 				"client_information": map[string]interface{}{
-					"ip":              req.GWPayload.GWData.ClientInformation.IP,
-					"device_type":     req.GWPayload.GWData.ClientInformation.DeviceType,
-					"network_type":    req.GWPayload.GWData.ClientInformation.NetworkType,
-					"platform":        req.GWPayload.GWData.ClientInformation.Platform,
-					"browser":         req.GWPayload.GWData.ClientInformation.Browser,
-					"browser_version": req.GWPayload.GWData.ClientInformation.BrowserVersion,
+					"ip":              req.GW_Payload.GW_Data.ClientInformation.IP,
+					"device_type":     req.GW_Payload.GW_Data.ClientInformation.DeviceType,
+					"network_type":    req.GW_Payload.GW_Data.ClientInformation.NetworkType,
+					"platform":        req.GW_Payload.GW_Data.ClientInformation.Platform,
+					"browser":         req.GW_Payload.GW_Data.ClientInformation.Browser,
+					"browser_version": req.GW_Payload.GW_Data.ClientInformation.BrowserVersion,
 				},
 				"http_request": map[string]interface{}{
-					"method": req.GWPayload.GWData.HTTPRequest.Method,
-					"url":    req.GWPayload.GWData.HTTPRequest.URL,
-					"host":   req.GWPayload.GWData.HTTPRequest.Host,
+					"method": req.GW_Payload.GW_Data.HTTPRequest.Method,
+					"url":    req.GW_Payload.GW_Data.HTTPRequest.URL,
+					"host":   req.GW_Payload.GW_Data.HTTPRequest.Host,
 					"headers": map[string]interface{}{
-						"user-agent":     req.GWPayload.GWData.HTTPRequest.Headers.UserAgent,
-						"content-type":   req.GWPayload.GWData.HTTPRequest.Headers.ContentType,
-						"content-length": req.GWPayload.GWData.HTTPRequest.Headers.ContentLength,
-						"referer":        req.GWPayload.GWData.HTTPRequest.Headers.Referer,
+						"user-agent":     req.GW_Payload.GW_Data.HTTPRequest.Headers.UserAgent,
+						"content-type":   req.GW_Payload.GW_Data.HTTPRequest.Headers.ContentType,
+						"content-length": req.GW_Payload.GW_Data.HTTPRequest.Headers.ContentLength,
+						"referer":        req.GW_Payload.GW_Data.HTTPRequest.Headers.Referer,
 					},
-					"query_parameters": req.GWPayload.GWData.HTTPRequest.QueryParams,
-					"body":             req.GWPayload.GWData.HTTPRequest.Body,
+					"query_parameters": req.GW_Payload.GW_Data.HTTPRequest.QueryParams,
+					"body":             req.GW_Payload.GW_Data.HTTPRequest.Body,
 				},
 			},
 		},
-		"request_created_at": time.Now().Format(time.RFC3339),
+		"request_created_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 	}
 
 	responseData, err := makeHTTPRequest(os.Getenv("WS_MODULE_COMMON_ATTACK_DETECTION_URL"), os.Getenv("WS_MODULE_COMMON_ATTACK_DETECTION_ENDPOINT"), requestBody)
@@ -661,25 +757,25 @@ func processCommonAttackDetection(req shared.GWRequestBody, eventInfo string, _ 
 		nil
 }
 
-func processDGADetection(req shared.GWRequestBody, eventInfo string, _ map[string]interface{}) (float64, error) {
+func processDGADetection(req shared.GW_RequestBody, eventInfo string, _ map[string]interface{}) (float64, error) {
 	log.WithFields(logrus.Fields{
 		"msg": "Event Info: " + eventInfo,
 	}).Debug("Processing DGA Detection")
 
-	refererURL := req.GWPayload.GWData.HTTPRequest.Headers.Referer
+	refererURL := req.GW_Payload.GW_Data.HTTPRequest.Headers.Referer
 
 	domain, err := helper.GetDomain(refererURL)
 	if err != nil {
 		return 0, err
 	}
 
-	RequestBody := map[string]string{
+	requestBody := map[string]string{
 		"event_info":         eventInfo,
 		"payload":            domain,
-		"request_created_at": time.Now().Format(time.RFC3339),
+		"request_created_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 	}
 
-	responseData, err := makeHTTPRequest(os.Getenv("WS_MODULE_DGA_DETECTION_URL"), os.Getenv("WS_MODULE_DGA_DETECTION_ENDPOINT"), RequestBody)
+	responseData, err := makeHTTPRequest(os.Getenv("WS_MODULE_DGA_DETECTION_URL"), os.Getenv("WS_MODULE_DGA_DETECTION_ENDPOINT"), requestBody)
 	if err != nil {
 		return 0, err
 	}
@@ -734,7 +830,7 @@ func processDGADetection(req shared.GWRequestBody, eventInfo string, _ map[strin
 	return score, nil
 }
 
-func processAgentProfile(agentId string, agentValue string, eventInfo string) (string, error) {
+func processAgentProfile(agentId string, agentValue string, eventInfo string) (string, string, error) {
 	getAgentProfile, err := handlerRedis(agentId, agentValue)
 	if err != nil {
 		log.Info("Cannot getting agent profile from Redis. Let getting agent profile from ws-configuration-service")
@@ -749,25 +845,56 @@ func processAgentProfile(agentId string, agentValue string, eventInfo string) (s
 					"key":  agentId,
 				},
 			},
-			"request_created_at": time.Now().Format(time.RFC3339),
+			"request_created_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 		}
-		responseData, err := makeHTTPRequest(os.Getenv("WS_MODULE_CONFIGURATION_SERVICE_URL"), os.Getenv("WS_MODULE_CONFIGURATION_SERVICE_ENDPOINT"), requestBody)
+		responseData, err := makeHTTPRequest(os.Getenv("WS_MODULE_CONFIGURATION_SERVICE_URL"), os.Getenv("WS_MODULE_CONFIGURATION_SERVICE_ENDPOINT")+"/profile", requestBody)
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"msg": err,
 			}).Error("Error calling WS Module Configuration Service")
-			return "", fmt.Errorf("failed to call WS Module Configuration Service: %v", err)
+			return "Error", "", fmt.Errorf("failed to call WS Module Configuration Service: %v", err)
 		}
 
 		var response map[string]interface{}
 		if err := json.Unmarshal(responseData, &response); err != nil {
-			return "", fmt.Errorf("failed to parse response data: %v", err)
+			return "Error", "", fmt.Errorf("failed to parse response data: %v", err)
 		}
 
-		data := response["profile"]
-		return data.(string), nil
+		data := response["data"].(map[string]interface{})
+		return response["status"].(string), data["profile"].(string), nil
 	}
-	return getAgentProfile, nil
+	return "Success", getAgentProfile, nil
+}
+
+func processAgentSynchronize(req shared.AS_RequestBody, eventInfo string) (string, string, error) {
+
+	requestBody := map[string]interface{}{
+		"event_info": eventInfo,
+		"payload": map[string]interface{}{
+			"data": map[string]interface{}{
+				"type":    "agent",
+				"key":     req.AgentID,
+				"profile": req.AS_Profile,
+			},
+		},
+		"request_created_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
+	}
+
+	responseData, err := makeHTTPRequest(os.Getenv("WS_MODULE_CONFIGURATION_SERVICE_URL"), os.Getenv("WS_MODULE_CONFIGURATION_SERVICE_ENDPOINT")+"/profile/synchronize", requestBody)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"msg": err,
+		}).Error("Error calling WS Module Configuration Service")
+		return "Error", "", fmt.Errorf("failed to call WS Module Configuration Service: %v", err)
+	}
+
+	var response map[string]interface{}
+	if err := json.Unmarshal(responseData, &response); err != nil {
+		return "Error", "", fmt.Errorf("failed to parse response data: %v", err)
+	}
+
+	data := response["data"].(map[string]interface{})
+	return response["status"].(string), data["profile"].(string), nil
 }
 
 // getSecret retrieves the API key based on the configuration
@@ -829,7 +956,7 @@ func main() {
 	timeOutHandlerAS := http.TimeoutHandler(apiKeyAuthMiddleware(http.HandlerFunc(HandleAgentSynchronize)), 30*time.Second, "Request timed out")
 	// Register the timeout handler
 	http.Handle("/api/v1/ws/services/gateway", timeoutHandlerGW)
-	http.Handle("/api/v1/ws/services/gateway/agent-profile", timeOutHandlerAP)
-	http.Handle("/api/v1/ws/services/gateway/agent-synchronize", timeOutHandlerAS)
+	http.Handle("/api/v1/ws/services/gateway/agent/profile", timeOutHandlerAP)
+	http.Handle("/api/v1/ws/services/gateway/agent/synchronize", timeOutHandlerAS)
 	log.Fatal(http.ListenAndServe(":5000", nil))
 }
