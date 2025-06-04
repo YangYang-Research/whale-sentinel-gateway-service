@@ -223,7 +223,7 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := shared.GW_ResponseBody{
-		Status:             "success",
+		Status:             "Success",
 		Message:            "Request processed successfully",
 		GW_ResponseData:    mapData,
 		AgentAction:        action,
