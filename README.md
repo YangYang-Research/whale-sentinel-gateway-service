@@ -5,7 +5,7 @@
 [![Dependency review](https://github.com/YangYang-Research/whale-sentinel-gateway-service/actions/workflows/dependency-review.yml/badge.svg?branch=dev)](https://github.com/YangYang-Research/whale-sentinel-gateway-service/actions/workflows/dependency-review.yml)
 [![Trivy](https://github.com/YangYang-Research/whale-sentinel-gateway-service/actions/workflows/trivy.yml/badge.svg?branch=main)](https://github.com/YangYang-Research/whale-sentinel-gateway-service/actions/workflows/trivy.yml)
 
-The Central Processing Module is a critical backbone of the Whale Sentinel (WS) security framework, serving as the primary communication bridge between Agents and the WS MDP system. This module plays a dual role in facilitating secure interaction while ensuring system integrity and real-time responsiveness.
+The Central Processing Module is a critical backbone of the Whale Sentinel (WS) security framework, serving as the primary communication bridge between Agents and the WS Services. This module plays a dual role in facilitating secure interaction while ensuring system integrity and real-time responsiveness.
 
 Key Functions:
 
