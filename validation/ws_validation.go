@@ -14,8 +14,8 @@ func ValidateGW_Request(req shared.GW_RequestBody) error {
 		return fmt.Errorf("missing required fields")
 	}
 
-	if matched, _ := regexp.MatchString(`^ws_agent_.*`, req.AgentID); !matched {
-		return fmt.Errorf("invalid AgentID format")
+	if matched, _ := regexp.MatchString(`^ws_agent_.*`, req.AgentName); !matched {
+		return fmt.Errorf("invalid AgentName format")
 	}
 
 	if _, err := time.Parse(time.RFC3339, req.RequestCreatedAt); err != nil {
@@ -29,8 +29,12 @@ func ValidateAP_Request(req shared.AP_RequestBody) error {
 		return fmt.Errorf("missing required fields")
 	}
 
-	if matched, _ := regexp.MatchString(`^ws_agent_.*`, req.AgentID); !matched {
-		return fmt.Errorf("invalid AgentID format")
+	if req.AgentName == "" {
+		return fmt.Errorf("missing required fields")
+	}
+
+	if matched, _ := regexp.MatchString(`^ws_agent_.*`, req.AgentName); !matched {
+		return fmt.Errorf("invalid AgentName format")
 	}
 
 	if _, err := time.Parse(time.RFC3339, req.RequestCreatedAt); err != nil {
@@ -44,8 +48,12 @@ func ValidateAS_Request(req shared.AS_RequestBody) error {
 		return fmt.Errorf("missing required fields")
 	}
 
-	if matched, _ := regexp.MatchString(`^ws_agent_.*`, req.AgentID); !matched {
-		return fmt.Errorf("invalid AgentID format")
+	if req.AgentName == "" {
+		return fmt.Errorf("missing required fields")
+	}
+
+	if matched, _ := regexp.MatchString(`^ws_agent_.*`, req.AgentName); !matched {
+		return fmt.Errorf("invalid AgentName format")
 	}
 
 	if req.AS_Profile == nil {

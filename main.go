@@ -79,7 +79,7 @@ func handlerRedis(key string, value string) (string, error) {
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"msg": err,
-			}).Error("Cannot SET - Cannot setting value in Redis")
+			}).Error("Cannot SET - Cannot set value in Redis")
 		}
 		return value, err
 	}
@@ -103,13 +103,13 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	eventInfo, eventID := helper.GenerateGWEventInfo(req)
+	eventInfo, eventID := helper.GenerateGW_EventInfo(req)
 
 	var (
 		status string
 	)
 
-	status, agentProfile, err := processAgentProfile(req.AgentID, "", eventInfo)
+	status, agentProfile, err := processAgentProfile(req.AgentID, req.AgentName, "", eventInfo)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"msg": err,
@@ -122,13 +122,40 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 			Status:             status,
 			Message:            "Failed to retrieve profile",
 			GW_ResponseData:    shared.GW_ResponseData{},
-			AgentAction:        "ALLOW",
+			AnalysisResult:     "ANALYSIS_FAILED_MISSING_AGENT_PROFILE",
 			EventInfo:          eventInfo,
 			RequestCreatedAt:   req.RequestCreatedAt,
 			RequestProcessedAt: time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
+
+		log.Infof("POST %v - 200", r.URL)
+		// Log the request to the log collector
+		go func(agentID string, agentName string, eventInfo string, rawRequest interface{}) {
+			// Log the request to the log collector
+			logData := map[string]interface{}{
+				"name":                 "ws-gateway-service",
+				"agent_id":             agentID,
+				"agent_name":           agentName,
+				"agent_running_mode":   "N/A",
+				"source":               agentName,
+				"destination":          "ws-gateway-service",
+				"event_info":           eventInfo,
+				"event_id":             eventID,
+				"type":                 "AGENT_EVENT",
+				"action":               "ANALYSIS_REQUEST",
+				"action_result":        "ANALYSIS_REQUEST_FAILED_MISSING_AGENT_PROFILE",
+				"action_status":        "SUCCESSED",
+				"request_created_at":   req.RequestCreatedAt,
+				"request_processed_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
+				"title":                "Received request from agent",
+				"raw_request":          rawRequest,
+				"timestamp":            time.Now().UTC().Format("2006-01-02T15:04:05Z"),
+			}
+
+			logger.Log("INFO", "ws-gateway-service", logData)
+		}(req.AgentID, req.AgentName, eventInfo, req)
 		return
 	}
 
@@ -214,19 +241,19 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 	}
 	wadThreshold := int(wad["threshold"].(float64))
 	dgaThreshold := int(dgad["threshold"].(float64))
-	var action string
+	var analysisResult string
 	if webAttackDetectionScore >= float64(wadThreshold) || DGADetectionScore >= float64(dgaThreshold) ||
 		crossSiteScriptingDetection || sqlInjectionDetection || httpVerbTamperingDetection || httpLargeRequestDetection {
-		action = "BLOCK"
+		analysisResult = "ABNORMAL_CLIENT_REQUEST"
 	} else {
-		action = "ALLOW"
+		analysisResult = "NORNAL_CLIENT_REQUEST"
 	}
 
 	response := shared.GW_ResponseBody{
 		Status:             "Success",
 		Message:            "Request processed successfully",
 		GW_ResponseData:    mapData,
-		AgentAction:        action,
+		AnalysisResult:     analysisResult,
 		EventInfo:          eventInfo,
 		RequestCreatedAt:   req.RequestCreatedAt,
 		RequestProcessedAt: time.Now().UTC().Format("2006-01-02T15:04:05Z"),
@@ -237,18 +264,21 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 
 	log.Infof("POST %v - 200", r.URL)
 	// Log the request to the logg collector
-	go func(agentID string, eventInfo string, rawRequest string) {
+	go func(agentID string, agentName string, eventInfo string, rawRequest interface{}) {
 		// Log the request to the log collector
 		logData := map[string]interface{}{
 			"name":                 "ws-gateway-service",
 			"agent_id":             agentID,
+			"agent_name":           agentName,
 			"agent_running_mode":   agent.Profile["running_mode"].(string),
-			"source":               agentID,
+			"source":               agentName,
 			"destination":          "ws-gateway-service",
 			"event_info":           eventInfo,
 			"event_id":             eventID,
 			"type":                 "AGENT_EVENT",
-			"agent_action":         action,
+			"action":               "ANALYSIS_REQUEST",
+			"action_result":        analysisResult,
+			"action_status":        "SUCCESSED",
 			"request_created_at":   req.RequestCreatedAt,
 			"request_processed_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 			"title":                "Received request from agent",
@@ -257,7 +287,7 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 		}
 
 		logger.Log("INFO", "ws-gateway-service", logData)
-	}(req.AgentID, eventInfo, (req.GW_Payload.GW_Data.HTTPRequest.QueryParams + req.GW_Payload.GW_Data.HTTPRequest.Body))
+	}(req.AgentID, req.AgentName, eventInfo, (req))
 }
 
 // HandleAgentProfile processes incoming requests for agent profile
@@ -278,20 +308,18 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	eventInfo, eventID := helper.GenerateACEventInfo(req)
+	eventInfo, eventID := helper.GenerateAP_EventInfo(req)
 
 	var (
 		status  string
 		message string
 	)
 
-	status, agentProfile, err := processAgentProfile(req.AgentID, "", eventInfo)
+	status, agentProfile, err := processAgentProfile(req.AgentID, req.AgentName, "", eventInfo)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"msg": err,
 		}).Error("Error processing Agent Profile")
-		http.Error(w, "Whale Sentinel - Internal Server Error", http.StatusInternalServerError)
-		return
 	}
 
 	if status == "Success" {
@@ -317,18 +345,21 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 
 		log.Infof("POST %v - 200", r.URL)
 		// Log the request to the logg collector
-		go func(agentID string, eventInfo string, rawRequest string) {
+		go func(agentID string, agentName string, eventInfo string, rawRequest interface{}) {
 			// Log the request to the log collector
 			logData := map[string]interface{}{
 				"name":                 "ws-gateway-service",
 				"agent_id":             agentID,
+				"agent_name":           agentName,
 				"agent_running_mode":   "N/A",
 				"source":               agentID,
 				"destination":          "ws-gateway-service",
 				"event_info":           eventInfo,
 				"event_id":             eventID,
 				"type":                 "AGENT_EVENT",
-				"agent_action":         "GET_PROFILE",
+				"action":               "GET_PROFILE",
+				"action_result":        "GET_PROFILE_FAIL",
+				"action_status":        "FAILURE",
 				"request_created_at":   req.RequestCreatedAt,
 				"request_processed_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 				"title":                "Received request from agent",
@@ -337,7 +368,7 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 			}
 
 			logger.Log("INFO", "ws-gateway-service", logData)
-		}(req.AgentID, eventInfo, (req.AgentID))
+		}(req.AgentID, req.AgentName, eventInfo, (req))
 		return
 	}
 
@@ -398,18 +429,21 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 
 	log.Infof("POST %v - 200", r.URL)
 	// Log the request to the logg collector
-	go func(agentID string, eventInfo string, rawRequest string) {
+	go func(agentID string, agentName string, eventInfo string, rawRequest interface{}) {
 		// Log the request to the log collector
 		logData := map[string]interface{}{
 			"name":                 "ws-gateway-service",
 			"agent_id":             agentID,
+			"agent_name":           agentName,
 			"agent_running_mode":   agent.Profile["running_mode"].(string),
-			"source":               agentID,
+			"source":               agentName,
 			"destination":          "ws-gateway-service",
 			"event_info":           eventInfo,
 			"event_id":             eventID,
 			"type":                 "AGENT_EVENT",
-			"agent_action":         "GET_PROFILE",
+			"action":               "GET_PROFILE",
+			"action_result":        "GET_PROFILE_SUCCESS",
+			"action_status":        "SUCCESSED",
 			"request_created_at":   req.RequestCreatedAt,
 			"request_processed_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 			"title":                "Received request from agent",
@@ -418,7 +452,7 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 		}
 
 		logger.Log("INFO", "ws-gateway-service", logData)
-	}(req.AgentID, eventInfo, (req.AgentID))
+	}(req.AgentID, req.AgentName, eventInfo, (req))
 }
 
 // HandleAgentSynchronize processes incoming requests for agent synchronization
@@ -439,7 +473,7 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	eventInfo, eventID := helper.GenerateASEventInfo(req)
+	eventInfo, eventID := helper.GenerateAS_EventInfo(req)
 
 	var (
 		status  string
@@ -451,8 +485,6 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 		log.WithFields(logrus.Fields{
 			"msg": err,
 		}).Error("Error processing Agent Synchronize")
-		http.Error(w, "Whale Sentinel - Internal Server Error", http.StatusInternalServerError)
-		return
 	}
 
 	if status == "Success" {
@@ -478,18 +510,21 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 
 		log.Infof("POST %v - 200", r.URL)
 		// Log the request to the logg collector
-		go func(agentID string, eventInfo string, rawRequest string) {
+		go func(agentID string, agentName string, eventInfo string, rawRequest interface{}) {
 			// Log the request to the log collector
 			logData := map[string]interface{}{
 				"name":                 "ws-gateway-service",
 				"agent_id":             agentID,
+				"agent_name":           agentName,
 				"agent_running_mode":   "N/A",
-				"source":               agentID,
+				"source":               agentName,
 				"destination":          "ws-gateway-service",
 				"event_info":           eventInfo,
 				"event_id":             eventID,
 				"type":                 "AGENT_EVENT",
-				"agent_action":         "SYNC_PROFILE",
+				"action":               "SYNC_PROFILE",
+				"action_result":        "SYNC_PROFILE_FAIL",
+				"action_status":        "FAILURE",
 				"request_created_at":   req.RequestCreatedAt,
 				"request_processed_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 				"title":                "Received request from agent",
@@ -498,7 +533,7 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 			}
 
 			logger.Log("INFO", "ws-gateway-service", logData)
-		}(req.AgentID, eventInfo, (req.AgentID))
+		}(req.AgentID, req.AgentName, eventInfo, (req))
 		return
 	}
 
@@ -559,18 +594,21 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 
 	log.Infof("POST %v - 200", r.URL)
 	// Log the request to the logg collector
-	go func(agentID string, eventInfo string, rawRequest string) {
+	go func(agentID string, agentName string, eventInfo string, rawRequest interface{}) {
 		// Log the request to the log collector
 		logData := map[string]interface{}{
 			"name":                 "ws-gateway-service",
 			"agent_id":             agentID,
+			"agent_name":           agentName,
 			"agent_running_mode":   agent.Profile["running_mode"].(string),
 			"source":               agentID,
 			"destination":          "ws-gateway-service",
 			"event_info":           eventInfo,
 			"event_id":             eventID,
 			"type":                 "AGENT_EVENT",
-			"agent_action":         "SYNC_PROFILE",
+			"action":               "SYNC_PROFILE",
+			"action_result":        "SYNC_PROFILE_SUCCESS",
+			"action_status":        "FAILURE",
 			"request_created_at":   req.RequestCreatedAt,
 			"request_processed_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 			"title":                "Received request from agent",
@@ -579,7 +617,7 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 		}
 
 		logger.Log("INFO", "ws-gateway-service", logData)
-	}(req.AgentID, eventInfo, (req.AgentID))
+	}(req.AgentID, req.AgentName, eventInfo, (req))
 }
 
 func makeHTTPRequest(url, endpoint string, body interface{}) ([]byte, error) {
@@ -830,8 +868,8 @@ func processDGADetection(req shared.GW_RequestBody, eventInfo string, _ map[stri
 	return score, nil
 }
 
-func processAgentProfile(agentId string, agentValue string, eventInfo string) (string, string, error) {
-	getAgentProfile, err := handlerRedis(agentId, agentValue)
+func processAgentProfile(agentId string, agentName string, agentValue string, eventInfo string) (string, string, error) {
+	getAgentProfile, err := handlerRedis(agentName, agentValue)
 	if err != nil {
 		log.Info("Cannot getting agent profile from Redis. Let getting agent profile from ws-configuration-service")
 	}
@@ -842,7 +880,8 @@ func processAgentProfile(agentId string, agentValue string, eventInfo string) (s
 			"payload": map[string]interface{}{
 				"data": map[string]interface{}{
 					"type": "agent",
-					"key":  agentId,
+					"name": agentName,
+					"id":   agentId,
 				},
 			},
 			"request_created_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
@@ -873,7 +912,8 @@ func processAgentSynchronize(req shared.AS_RequestBody, eventInfo string) (strin
 		"payload": map[string]interface{}{
 			"data": map[string]interface{}{
 				"type":    "agent",
-				"key":     req.AgentID,
+				"name":    req.AgentName,
+				"id":      req.AgentID,
 				"profile": req.AS_Profile,
 			},
 		},

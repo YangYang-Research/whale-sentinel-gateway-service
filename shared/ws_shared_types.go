@@ -3,6 +3,7 @@ package shared
 type (
 	GW_RequestBody struct {
 		AgentID          string     `json:"agent_id"`
+		AgentName        string     `json:"agent_name"`
 		GW_Payload       GW_Payload `json:"payload"`
 		RequestCreatedAt string     `json:"request_created_at"`
 	}
@@ -43,6 +44,7 @@ type (
 
 	AP_RequestBody struct {
 		AgentID          string `json:"agent_id"`
+		AgentName        string `json:"agent_name"`
 		RequestCreatedAt string `json:"request_created_at"`
 	}
 
@@ -54,7 +56,7 @@ type (
 		Status             string          `json:"status"`
 		Message            string          `json:"message"`
 		GW_ResponseData    GW_ResponseData `json:"data"`
-		AgentAction        string          `json:"agent_action"`
+		AnalysisResult     string          `json:"analysis_result"`
 		EventInfo          string          `json:"event_info"`
 		RequestCreatedAt   string          `json:"request_created_at"`
 		RequestProcessedAt string          `json:"request_processed_at"`
@@ -81,6 +83,7 @@ type (
 
 	AS_RequestBody struct {
 		AgentID          string                 `json:"agent_id"`
+		AgentName        string                 `json:"agent_name"`
 		AS_Profile       map[string]interface{} `json:"profile"`
 		RequestCreatedAt string                 `json:"request_created_at"`
 	}
