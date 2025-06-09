@@ -1,5 +1,6 @@
 # Whale Sentinel Gateway Service
 
+[![CodeQL](https://github.com/YangYang-Research/whale-sentinel-gateway-service/actions/workflows/github-code-scanning/codeql/badge.svg?branch=main)](https://github.com/YangYang-Research/whale-sentinel-gateway-service/actions/workflows/github-code-scanning/codeql)
 [![CodeQL Advanced](https://github.com/YangYang-Research/whale-sentinel-gateway-service/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/YangYang-Research/whale-sentinel-gateway-service/actions/workflows/codeql.yml)
 [![Dependency review](https://github.com/YangYang-Research/whale-sentinel-gateway-service/actions/workflows/dependency-review.yml/badge.svg?branch=main)](https://github.com/YangYang-Research/whale-sentinel-gateway-service/actions/workflows/dependency-review.yml)
 [![Trivy](https://github.com/YangYang-Research/whale-sentinel-gateway-service/actions/workflows/trivy.yml/badge.svg?branch=main)](https://github.com/YangYang-Research/whale-sentinel-gateway-service/actions/workflows/trivy.yml)
