@@ -129,6 +129,7 @@ type (
 		DetectSqlInjection       bool `json:"detect_sql_injection"`
 		DetectHTTPVerbTampering  bool `json:"detect_http_verb_tampering"`
 		DetectHTTPLargeRequest   bool `json:"detect_http_large_request"`
+		DetectUnknowAttack       bool `json:"detect_unknow_attack"`
 	}
 
 	SecureResponseHeaderConfig struct {

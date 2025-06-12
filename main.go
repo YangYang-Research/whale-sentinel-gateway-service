@@ -179,6 +179,7 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 		sqlInjectionDetection                                            bool
 		httpVerbTamperingDetection                                       bool
 		httpLargeRequestDetection                                        bool
+		unknowAttackDetection                                            bool
 		wg                                                               sync.WaitGroup
 		webAttackDetectionErr, commonAttackDetectionErr, dgaDetectionErr error
 	)
@@ -196,7 +197,7 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer wg.Done()
 		if cad["enable"].(bool) {
-			crossSiteScriptingDetection, sqlInjectionDetection, httpVerbTamperingDetection, httpLargeRequestDetection, commonAttackDetectionErr = processCommonAttackDetection(req, eventInfo, cad)
+			crossSiteScriptingDetection, sqlInjectionDetection, httpVerbTamperingDetection, httpLargeRequestDetection, unknowAttackDetection, commonAttackDetectionErr = processCommonAttackDetection(req, eventInfo, cad)
 		}
 	}()
 
@@ -237,13 +238,14 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 			"sql_injection_detection":        sqlInjectionDetection,
 			"http_verb_tampering_detection":  httpVerbTamperingDetection,
 			"http_large_request_detection":   httpLargeRequestDetection,
+			"unknow_attack_detection":        unknowAttackDetection,
 		},
 	}
 	wadThreshold := int(wad["threshold"].(float64))
 	dgaThreshold := int(dgad["threshold"].(float64))
 	var analysisResult string
 	if webAttackDetectionScore >= float64(wadThreshold) || DGADetectionScore >= float64(dgaThreshold) ||
-		crossSiteScriptingDetection || sqlInjectionDetection || httpVerbTamperingDetection || httpLargeRequestDetection {
+		crossSiteScriptingDetection || sqlInjectionDetection || httpVerbTamperingDetection || httpLargeRequestDetection || unknowAttackDetection {
 		analysisResult = "ABNORMAL_CLIENT_REQUEST"
 	} else {
 		analysisResult = "NORNAL_CLIENT_REQUEST"
@@ -680,6 +682,8 @@ func processWebAttackDetection(req shared.GW_RequestBody, eventInfo string, wad 
 	}
 
 	requestBody := map[string]interface{}{
+		"agent_id":           req.AgentID,
+		"agent_name":         req.AgentName,
 		"event_info":         eventInfo,
 		"payload":            concatenatedData,
 		"request_created_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
@@ -740,13 +744,14 @@ func processWebAttackDetection(req shared.GW_RequestBody, eventInfo string, wad 
 	return score, nil
 }
 
-func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _ map[string]interface{}) (bool, bool, bool, bool, error) {
+func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _ map[string]interface{}) (bool, bool, bool, bool, bool, error) {
 	log.WithFields(logrus.Fields{
 		"msg": "Event Info: " + eventInfo,
 	}).Debug("Processing Common Attack Detection")
 
 	requestBody := map[string]interface{}{
 		"agent_id":   req.AgentID,
+		"agent_name": req.AgentName,
 		"event_info": eventInfo,
 		"payload": map[string]interface{}{
 			"data": map[string]interface{}{
@@ -778,12 +783,12 @@ func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _
 
 	responseData, err := makeHTTPRequest(os.Getenv("WS_MODULE_COMMON_ATTACK_DETECTION_URL"), os.Getenv("WS_MODULE_COMMON_ATTACK_DETECTION_ENDPOINT"), requestBody)
 	if err != nil {
-		return false, false, false, false, err
+		return false, false, false, false, false, err
 	}
 
 	var response map[string]interface{}
 	if err := json.Unmarshal(responseData, &response); err != nil {
-		return false, false, false, false, fmt.Errorf("failed to parse response data: %v", err)
+		return false, false, false, false, false, fmt.Errorf("failed to parse response data: %v", err)
 	}
 
 	//Debug: Log the response JSON
@@ -797,6 +802,7 @@ func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _
 		data["sql_injection_detection"].(bool),
 		data["http_verb_tampering_detection"].(bool),
 		data["http_large_request_detection"].(bool),
+		data["unknow_attack_detection"].(bool),
 		nil
 }
 
@@ -813,6 +819,8 @@ func processDGADetection(req shared.GW_RequestBody, eventInfo string, _ map[stri
 	}
 
 	requestBody := map[string]string{
+		"agent_id":           req.AgentID,
+		"agent_name":         req.AgentName,
 		"event_info":         eventInfo,
 		"payload":            domain,
 		"request_created_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
