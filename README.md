@@ -15,3 +15,7 @@ Key Functions:
 ✅ Secure Communication Gateway – Acting as a trusted intermediary, this module enforces authentication, validates request formats, and ensures encrypted transmission between components to maintain data integrity.
 
 ✅ System Synchronization & Intelligence – By continuously syncing profile statuses and security configurations, it supports a proactive security posture, allowing seamless coordination between Agents and the WS system.
+
+## Contributing
+
+## License
