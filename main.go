@@ -384,6 +384,7 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	wad := agent.Profile["ws_module_web_attack_detection"].(map[string]interface{})
+	rrl := agent.Profile["ws_request_rate_limit"].(map[string]interface{})
 	dgad := agent.Profile["ws_module_dga_detection"].(map[string]interface{})
 	cad := agent.Profile["ws_module_common_attack_detection"].(map[string]interface{})
 	srh := agent.Profile["secure_response_headers"].(map[string]interface{})
@@ -397,6 +398,10 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 			Enable:       wad["enable"].(bool),
 			DetectHeader: wad["detect_header"].(bool),
 			Threshold:    int(wad["threshold"].(float64)),
+		},
+		RequestRateLimit: shared.RequestRateLimitConfig{
+			Enable:    rrl["enable"].(bool),
+			Threshold: int(rrl["threshold"].(float64)),
 		},
 		DGADetection: shared.DGADetectionConfig{
 			Enable:    dgad["enable"].(bool),
@@ -549,6 +554,7 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	wad := agent.Profile["ws_module_web_attack_detection"].(map[string]interface{})
+	rrl := agent.Profile["ws_request_rate_limit"].(map[string]interface{})
 	dgad := agent.Profile["ws_module_dga_detection"].(map[string]interface{})
 	cad := agent.Profile["ws_module_common_attack_detection"].(map[string]interface{})
 	srh := agent.Profile["secure_response_headers"].(map[string]interface{})
@@ -562,6 +568,10 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 			Enable:       wad["enable"].(bool),
 			DetectHeader: wad["detect_header"].(bool),
 			Threshold:    int(wad["threshold"].(float64)),
+		},
+		RequestRateLimit: shared.RequestRateLimitConfig{
+			Enable:    rrl["enable"].(bool),
+			Threshold: int(rrl["threshold"].(float64)),
 		},
 		DGADetection: shared.DGADetectionConfig{
 			Enable:    dgad["enable"].(bool),
