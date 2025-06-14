@@ -934,10 +934,11 @@ func processAgentSynchronize(req shared.AS_RequestBody, eventInfo string) (strin
 		"event_info": eventInfo,
 		"payload": map[string]interface{}{
 			"data": map[string]interface{}{
-				"type":    "agent",
-				"name":    req.AgentName,
-				"id":      req.AgentID,
-				"profile": req.AS_Profile,
+				"type":       "agent",
+				"name":       req.AgentName,
+				"id":         req.AgentID,
+				"profile":    req.AS_Profile,
+				"ip_address": req.IPAddress,
 			},
 		},
 		"request_created_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
