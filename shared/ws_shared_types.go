@@ -107,6 +107,7 @@ type (
 		LiteModeDataIsSynchronized    bool                        `json:"lite_mode_data_is_synchronized"`
 		LiteModeDataSynchronizeStatus string                      `json:"lite_mode_data_synchronize_status"`
 		WebAttackDetection            WebAttackDetectionConfig    `json:"ws_module_web_attack_detection"`
+		RequestRateLimit              RequestRateLimitConfig      `json:"ws_request_rate_limit"`
 		DGADetection                  DGADetectionConfig          `json:"ws_module_dga_detection"`
 		CommonAttackDetection         CommonAttackDetectionConfig `json:"ws_module_common_attack_detection"`
 		SecureResponseHeaders         SecureResponseHeaderConfig  `json:"secure_response_headers"`
@@ -116,6 +117,11 @@ type (
 		Enable       bool `json:"enable"`
 		DetectHeader bool `json:"detect_header"`
 		Threshold    int  `json:"threshold"`
+	}
+
+	RequestRateLimitConfig struct {
+		Enable    bool `json:"enable"`
+		Threshold int  `json:"threshold"`
 	}
 
 	DGADetectionConfig struct {
