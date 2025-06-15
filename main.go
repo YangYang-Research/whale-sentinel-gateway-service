@@ -109,7 +109,7 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 		status string
 	)
 
-	status, agentProfile, err := processAgentProfile(req.AgentID, req.AgentName, "", eventInfo)
+	status, agentProfile, err := processAgentProfile(req.GW_Payload.GW_Data.AgentID, req.GW_Payload.GW_Data.AgentName, "", eventInfo)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"msg": err,
@@ -155,7 +155,7 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 			}
 
 			logger.Log("INFO", "ws-gateway-service", logData)
-		}(req.AgentID, req.AgentName, eventInfo, req)
+		}(req.GW_Payload.GW_Data.AgentID, req.GW_Payload.GW_Data.AgentName, eventInfo, req)
 		return
 	}
 
@@ -289,7 +289,7 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 		}
 
 		logger.Log("INFO", "ws-gateway-service", logData)
-	}(req.AgentID, req.AgentName, eventInfo, (req))
+	}(req.GW_Payload.GW_Data.AgentID, req.GW_Payload.GW_Data.AgentName, eventInfo, (req))
 }
 
 // HandleAgentProfile processes incoming requests for agent profile
@@ -692,10 +692,14 @@ func processWebAttackDetection(req shared.GW_RequestBody, eventInfo string, wad 
 	}
 
 	requestBody := map[string]interface{}{
-		"agent_id":           req.AgentID,
-		"agent_name":         req.AgentName,
-		"event_info":         eventInfo,
-		"payload":            concatenatedData,
+		"event_info": eventInfo,
+		"payload": map[string]interface{}{
+			"data": map[string]interface{}{
+				"agent_id":   req.GW_Payload.GW_Data.AgentID,
+				"agent_name": req.GW_Payload.GW_Data.AgentName,
+				"sentence":   concatenatedData,
+			},
+		},
 		"request_created_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 	}
 
@@ -760,11 +764,11 @@ func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _
 	}).Debug("Processing Common Attack Detection")
 
 	requestBody := map[string]interface{}{
-		"agent_id":   req.AgentID,
-		"agent_name": req.AgentName,
 		"event_info": eventInfo,
 		"payload": map[string]interface{}{
 			"data": map[string]interface{}{
+				"agent_id":   req.GW_Payload.GW_Data.AgentID,
+				"agent_name": req.GW_Payload.GW_Data.AgentName,
 				"client_information": map[string]interface{}{
 					"ip":              req.GW_Payload.GW_Data.ClientInformation.IP,
 					"device_type":     req.GW_Payload.GW_Data.ClientInformation.DeviceType,
@@ -828,11 +832,15 @@ func processDGADetection(req shared.GW_RequestBody, eventInfo string, _ map[stri
 		return 0, err
 	}
 
-	requestBody := map[string]string{
-		"agent_id":           req.AgentID,
-		"agent_name":         req.AgentName,
-		"event_info":         eventInfo,
-		"payload":            domain,
+	requestBody := map[string]interface{}{
+		"event_info": eventInfo,
+		"payload": map[string]interface{}{
+			"data": map[string]interface{}{
+				"agent_id":   req.GW_Payload.GW_Data.AgentID,
+				"agent_name": req.GW_Payload.GW_Data.AgentName,
+				"sentence":   domain,
+			},
+		},
 		"request_created_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 	}
 

@@ -2,8 +2,6 @@ package shared
 
 type (
 	GW_RequestBody struct {
-		AgentID          string     `json:"agent_id"`
-		AgentName        string     `json:"agent_name"`
 		GW_Payload       GW_Payload `json:"payload"`
 		RequestCreatedAt string     `json:"request_created_at"`
 	}
@@ -13,6 +11,8 @@ type (
 	}
 
 	GW_Data struct {
+		AgentID           string            `json:"agent_id"`
+		AgentName         string            `json:"agent_name"`
 		ClientInformation ClientInformation `json:"client_information"`
 		HTTPRequest       HTTPRequest       `json:"http_request"`
 	}
