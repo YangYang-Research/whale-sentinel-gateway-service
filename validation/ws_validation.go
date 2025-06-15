@@ -15,7 +15,7 @@ func ValidateGW_Request(req shared.GW_RequestBody) error {
 		return fmt.Errorf("missing required fields")
 	}
 
-	if matched, _ := regexp.MatchString(`^ws_agent_.*`, req.AgentName); !matched {
+	if matched, _ := regexp.MatchString(`^ws_agent_.*`, req.GW_Payload.GW_Data.AgentName); !matched {
 		return fmt.Errorf("invalid AgentName format")
 	}
 

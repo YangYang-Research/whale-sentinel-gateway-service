@@ -65,7 +65,7 @@ func GetDomain(fullUrl string) (string, error) {
 func GenerateGW_EventInfo(req shared.GW_RequestBody) (string, string) {
 	hashInput := req.RequestCreatedAt + req.GW_Payload.GW_Data.ClientInformation.IP + req.GW_Payload.GW_Data.ClientInformation.DeviceType + req.GW_Payload.GW_Data.HTTPRequest.Method + req.GW_Payload.GW_Data.HTTPRequest.Host + req.GW_Payload.GW_Data.HTTPRequest.QueryParams + req.GW_Payload.GW_Data.HTTPRequest.Body
 	eventID := sha256.Sum256([]byte(hashInput))
-	eventInfo := req.AgentName + "|" + "WS_GATEWAY_SERVICE" + "|" + hex.EncodeToString(eventID[:])
+	eventInfo := req.GW_Payload.GW_Data.AgentName + "|" + "WS_GATEWAY_SERVICE" + "|" + hex.EncodeToString(eventID[:])
 	return eventInfo, hex.EncodeToString(eventID[:])
 }
 
