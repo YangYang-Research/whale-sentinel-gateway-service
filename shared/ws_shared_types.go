@@ -82,11 +82,19 @@ type (
 	}
 
 	AS_RequestBody struct {
-		AgentID          string                 `json:"agent_id"`
-		AgentName        string                 `json:"agent_name"`
-		AS_Profile       map[string]interface{} `json:"profile"`
-		IPAddress        string                 `json:"ip_address"`
-		RequestCreatedAt string                 `json:"request_created_at"`
+		AgentID          string     `json:"agent_id"`
+		AgentName        string     `json:"agent_name"`
+		AS_Payload       AS_Payload `json:"payload"`
+		IPAddress        string     `json:"ip_address"`
+		RequestCreatedAt string     `json:"request_created_at"`
+	}
+
+	AS_Payload struct {
+		AS_Data AS_Data `json:"data"`
+	}
+
+	AS_Data struct {
+		AS_Profile map[string]interface{} `json:"profile"`
 	}
 
 	AS_ResponseBody struct {
