@@ -70,16 +70,16 @@ func GenerateGW_EventInfo(req shared.GW_RequestBody) (string, string) {
 }
 
 func GenerateAP_EventInfo(req shared.AP_RequestBody) (string, string) {
-	hashInput := req.RequestCreatedAt + req.AgentID
+	hashInput := req.RequestCreatedAt + req.AP_Payload.AP_Data.AgentName
 	eventID := sha256.Sum256([]byte(hashInput))
-	eventInfo := req.AgentName + "|" + "WS_GATEWAY_SERVICE" + "|" + hex.EncodeToString(eventID[:])
+	eventInfo := req.AP_Payload.AP_Data.AgentName + "|" + "WS_GATEWAY_SERVICE" + "|" + hex.EncodeToString(eventID[:])
 	return eventInfo, hex.EncodeToString(eventID[:])
 }
 
 func GenerateAS_EventInfo(req shared.AS_RequestBody) (string, string) {
-	hashInput := req.RequestCreatedAt + req.AgentID
+	hashInput := req.RequestCreatedAt + req.AS_Payload.AS_Data.AgentID
 	eventID := sha256.Sum256([]byte(hashInput))
-	eventInfo := req.AgentName + "|" + "WS_GATEWAY_SERVICE" + "|" + hex.EncodeToString(eventID[:])
+	eventInfo := req.AS_Payload.AS_Data.AgentName + "|" + "WS_GATEWAY_SERVICE" + "|" + hex.EncodeToString(eventID[:])
 	return eventInfo, hex.EncodeToString(eventID[:])
 }
 
