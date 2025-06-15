@@ -317,7 +317,7 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 		message string
 	)
 
-	status, agentProfile, err := processAgentProfile(req.AgentID, req.AgentName, "", eventInfo)
+	status, agentProfile, err := processAgentProfile(req.AP_Payload.AP_Data.AgentID, req.AP_Payload.AP_Data.AgentName, "", eventInfo)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"msg": err,
@@ -370,7 +370,7 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 			}
 
 			logger.Log("INFO", "ws-gateway-service", logData)
-		}(req.AgentID, req.AgentName, eventInfo, (req))
+		}(req.AP_Payload.AP_Data.AgentID, req.AP_Payload.AP_Data.AgentName, eventInfo, (req))
 		return
 	}
 
@@ -459,7 +459,7 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 		}
 
 		logger.Log("INFO", "ws-gateway-service", logData)
-	}(req.AgentID, req.AgentName, eventInfo, (req))
+	}(req.AP_Payload.AP_Data.AgentID, req.AP_Payload.AP_Data.AgentName, eventInfo, (req))
 }
 
 // HandleAgentSynchronize processes incoming requests for agent synchronization
@@ -540,7 +540,7 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 			}
 
 			logger.Log("INFO", "ws-gateway-service", logData)
-		}(req.AgentID, req.AgentName, eventInfo, (req))
+		}(req.AS_Payload.AS_Data.AgentID, req.AS_Payload.AS_Data.AgentName, eventInfo, (req))
 		return
 	}
 
@@ -629,7 +629,7 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 		}
 
 		logger.Log("INFO", "ws-gateway-service", logData)
-	}(req.AgentID, req.AgentName, eventInfo, (req))
+	}(req.AS_Payload.AS_Data.AgentID, req.AS_Payload.AS_Data.AgentName, eventInfo, (req))
 }
 
 func makeHTTPRequest(url, endpoint string, body interface{}) ([]byte, error) {
@@ -935,10 +935,10 @@ func processAgentSynchronize(req shared.AS_RequestBody, eventInfo string) (strin
 		"payload": map[string]interface{}{
 			"data": map[string]interface{}{
 				"type":       "agent",
-				"name":       req.AgentName,
-				"id":         req.AgentID,
-				"profile":    req.AS_Profile,
-				"ip_address": req.IPAddress,
+				"name":       req.AS_Payload.AS_Data.AgentName,
+				"id":         req.AS_Payload.AS_Data.AgentID,
+				"profile":    req.AS_Payload.AS_Data.AS_Profile,
+				"ip_address": req.AS_Payload.AS_Data.IPAddress,
 			},
 		},
 		"request_created_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),

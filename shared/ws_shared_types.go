@@ -43,9 +43,17 @@ type (
 	}
 
 	AP_RequestBody struct {
-		AgentID          string `json:"agent_id"`
-		AgentName        string `json:"agent_name"`
-		RequestCreatedAt string `json:"request_created_at"`
+		AP_Payload       AP_Payload `json:"payload"`
+		RequestCreatedAt string     `json:"request_created_at"`
+	}
+
+	AP_Payload struct {
+		AP_Data AP_Data `json:"data"`
+	}
+
+	AP_Data struct {
+		AgentID   string `json:"agent_id"`
+		AgentName string `json:"agent_name"`
 	}
 
 	AgentProfileRaw struct {
@@ -82,10 +90,7 @@ type (
 	}
 
 	AS_RequestBody struct {
-		AgentID          string     `json:"agent_id"`
-		AgentName        string     `json:"agent_name"`
 		AS_Payload       AS_Payload `json:"payload"`
-		IPAddress        string     `json:"ip_address"`
 		RequestCreatedAt string     `json:"request_created_at"`
 	}
 
@@ -94,7 +99,10 @@ type (
 	}
 
 	AS_Data struct {
+		AgentID    string                 `json:"agent_id"`
+		AgentName  string                 `json:"agent_name"`
 		AS_Profile map[string]interface{} `json:"profile"`
+		IPAddress  string                 `json:"ip_address"`
 	}
 
 	AS_ResponseBody struct {
