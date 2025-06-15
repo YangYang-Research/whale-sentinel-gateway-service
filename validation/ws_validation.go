@@ -56,10 +56,6 @@ func ValidateAS_Request(req shared.AS_RequestBody) error {
 		return fmt.Errorf("invalid AgentName format")
 	}
 
-	if req.AS_Profile == nil {
-		return fmt.Errorf("missing payload")
-	}
-
 	if _, err := time.Parse(time.RFC3339, req.RequestCreatedAt); err != nil {
 		return fmt.Errorf("invalid timestamp format")
 	}
