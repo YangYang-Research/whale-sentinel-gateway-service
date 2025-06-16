@@ -17,31 +17,52 @@ var logger *logrus.Logger
 
 // LogEntry is the standard structure for logs
 type (
-	Default_LogEntry struct {
-		Title     string `json:"title"`
-		Level     string `json:"level"`
-		Timestamp string `json:"timestamp"`
+	WSGate_LogEntry struct {
+		Serivce     string      `json:"service"`
+		Agent       Agent       `json:"agent"`
+		Source      string      `json:"source"`
+		Destination string      `json:"destination"`
+		Event       Event       `json:"event"`
+		Level       string      `json:"level"`
+		Type        string      `json:"type"`
+		Action      Action      `json:"action"`
+		Metrix      Metrix      `json:"metrix"`
+		Message     string      `json:"message"`
+		RawRequest  interface{} `json:"raw_request"`
+		Timestamps  Timestamps  `json:"timestamps"`
 	}
 
-	WSGate_LogEntry struct {
-		Name               string      `json:"name"`
-		AgentID            string      `json:"agent_id"`
-		AgentName          string      `json:"agent_name"`
-		AgentRuningMode    string      `json:"agent_running_mode"`
-		Source             string      `json:"source"`
-		Destination        string      `json:"destination"`
-		EventInfo          string      `json:"event_info"`
-		Level              string      `json:"level"`
-		EventID            string      `json:"event_id"`
-		Type               string      `json:"type"`
-		Action             string      `json:"action"`
-		ActionResult       string      `json:"action_result"`
-		ActionStatus       string      `json:"acction_status"`
-		RequestCreatedAt   int64       `json:"request_created_at"`
-		RequestProcessedAt int64       `json:"request_processed_at"`
-		Title              string      `json:"title"`
-		RawRequest         interface{} `json:"raw_request"`
-		Timestamp          string      `json:"timestamp"`
+	Agent struct {
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		RunningMode string `json:"running_mode"`
+	}
+
+	Event struct {
+		ID   string `json:"id"`
+		Info string `json:"info"`
+	}
+
+	Action struct {
+		Type   string `json:"type"`
+		Result string `json:"result"`
+		Status string `json:"status"`
+	}
+
+	Metrix struct {
+		WebAttackDetectionPredictScore float64 `json:"web_attack_detection_predict_score"`
+		DGADetectionPredictScore       float64 `json:"dga_detection_predict_score"`
+		CrossSiteScriptingDetection    bool    `json:"cross_site_scripting_detection"`
+		SQLInjectionDetection          bool    `json:"sql_injection_detection"`
+		HttpVerbTamperingDetection     bool    `json:"http_verb_tampering_detection"`
+		HttpLargeRequestDetection      bool    `json:"http_large_request_detection"`
+		UnknowAttackDetection          bool    `json:"unknow_attack_detection"`
+	}
+
+	Timestamps struct {
+		RequestCreatedAt   int64  `json:"request_created_at"`
+		RequestProcessedAt int64  `json:"request_processed_at"`
+		LoggedAt           string `json:"logged_at"`
 	}
 )
 
@@ -53,6 +74,7 @@ func SetupWSLogger(serviceName string, logMaxSize int, logMaxBackups int, logMax
 		log.Fatalf("Failed to create log directory: %v", err)
 	}
 
+	// Set up the log file path
 	logFile := fmt.Sprintf("%s/app.log", logDir)
 
 	logger = logrus.New()
@@ -112,57 +134,81 @@ func toUnixTime(timestamp interface{}) int64 {
 	return parsedTime.Unix()
 }
 
+func getFloat64OrDefault(data map[string]interface{}, key string, defaultValue float64) float64 {
+	if val, ok := data[key]; ok {
+		if f, ok := val.(float64); ok {
+			return f
+		}
+	}
+	return defaultValue
+}
+
+func getBoolOrDefault(data map[string]interface{}, key string, defaultValue bool) bool {
+	if val, ok := data[key]; ok {
+		if b, ok := val.(bool); ok {
+			return b
+		}
+	}
+	return defaultValue
+}
+
 // Log function to create and log entries based on the service name
-func Log(level string, service_name string, log_data map[string]interface{}) {
+func Log(level string, log_data map[string]interface{}) {
 
 	var jsonData []byte
 	var err error
 
-	switch service_name {
-	case "ws-gateway-service":
-		entry := WSGate_LogEntry{
-			Name:               service_name,
-			AgentID:            log_data["agent_id"].(string),
-			AgentName:          log_data["agent_name"].(string),
-			AgentRuningMode:    log_data["agent_running_mode"].(string),
-			Source:             log_data["source"].(string),
-			Destination:        log_data["destination"].(string),
-			EventInfo:          log_data["event_info"].(string),
-			Level:              strings.ToUpper(level),
-			EventID:            log_data["event_id"].(string),
-			Type:               log_data["type"].(string),
-			Action:             log_data["action"].(string),
-			ActionResult:       log_data["action_result"].(string),
-			ActionStatus:       log_data["action_status"].(string),
+	entry := WSGate_LogEntry{
+		Serivce: log_data["service"].(string),
+		Agent: Agent{
+			ID:          log_data["agent_id"].(string),
+			Name:        log_data["agent_name"].(string),
+			RunningMode: log_data["agent_running_mode"].(string),
+		},
+		Source:      log_data["source"].(string),
+		Destination: log_data["destination"].(string),
+		Event: Event{
+			ID:   log_data["event_id"].(string),
+			Info: log_data["event_info"].(string),
+		},
+		Level: strings.ToUpper(level),
+		Type:  log_data["type"].(string),
+		Action: Action{
+			Type:   log_data["action_type"].(string),
+			Result: log_data["action_result"].(string),
+			Status: log_data["action_status"].(string),
+		},
+		Metrix: Metrix{
+			WebAttackDetectionPredictScore: getFloat64OrDefault(log_data, "web_attack_detection_predict_score", 0.0),
+			DGADetectionPredictScore:       getFloat64OrDefault(log_data, "dga_detection_predict_score", 0.0),
+			CrossSiteScriptingDetection:    getBoolOrDefault(log_data, "cross_site_scripting_detection", false),
+			SQLInjectionDetection:          getBoolOrDefault(log_data, "sql_injection_detection", false),
+			HttpVerbTamperingDetection:     getBoolOrDefault(log_data, "http_verb_tampering_detection", false),
+			HttpLargeRequestDetection:      getBoolOrDefault(log_data, "http_large_request_detection", false),
+			UnknowAttackDetection:          getBoolOrDefault(log_data, "unknow_attack_detection", false),
+		},
+		Message: log_data["message"].(string),
+		RawRequest: func() interface{} {
+			switch v := log_data["raw_request"].(type) {
+			case string:
+				return SanitizeRawRequest(v)
+			case []byte:
+				return SanitizeRawRequest(string(v))
+			default:
+				// Try to marshal to JSON string if possible
+				if b, err := json.Marshal(v); err == nil {
+					return SanitizeRawRequest(string(b))
+				}
+				return v
+			}
+		}(),
+		Timestamps: Timestamps{
 			RequestCreatedAt:   toUnixTime(log_data["request_created_at"]),
 			RequestProcessedAt: toUnixTime(log_data["request_processed_at"]),
-			Title:              log_data["title"].(string),
-			RawRequest: func() interface{} {
-				switch v := log_data["raw_request"].(type) {
-				case string:
-					return SanitizeRawRequest(v)
-				case []byte:
-					return SanitizeRawRequest(string(v))
-				default:
-					// Try to marshal to JSON string if possible
-					if b, err := json.Marshal(v); err == nil {
-						return SanitizeRawRequest(string(b))
-					}
-					return v
-				}
-			}(),
-			Timestamp: log_data["timestamp"].(string),
-		}
-		jsonData, err = json.Marshal(entry)
-
-	default:
-		entry := Default_LogEntry{
-			Title:     log_data["title"].(string),
-			Level:     strings.ToUpper(level),
-			Timestamp: log_data["timestamp"].(string),
-		}
-		jsonData, err = json.Marshal(entry)
+			LoggedAt:           time.Now().UTC().Format("2006-01-02T15:04:05Z"),
+		},
 	}
+	jsonData, err = json.Marshal(entry)
 
 	if err != nil {
 		log.Printf("Failed to marshal log entry: %v", err)
