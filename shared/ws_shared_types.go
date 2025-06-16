@@ -71,9 +71,9 @@ type (
 	}
 
 	GW_ResponseData struct {
-		WebAttackDetectionScore float64         `json:"ws_module_web_attack_detection_score"`
-		DGADetectionScore       float64         `json:"ws_module_dga_detection_score"`
-		CommonAttackDetection   map[string]bool `json:"ws_module_common_attack_detection"`
+		WebAttackDetectionPredictScore float64         `json:"ws_module_web_attack_detection_predict_score"`
+		DGADetectionPredictScore       float64         `json:"ws_module_dga_detection_predict_score"`
+		CommonAttackDetection          map[string]bool `json:"ws_module_common_attack_detection"`
 	}
 
 	AP_ResponseBody struct {
