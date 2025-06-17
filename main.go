@@ -245,7 +245,7 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 		crossSiteScriptingDetection || sqlInjectionDetection || httpVerbTamperingDetection || httpLargeRequestDetection || unknowAttackDetection {
 		analysisResult = "ABNORMAL_REQUEST"
 	} else {
-		analysisResult = "NORNAL_REQUEST"
+		analysisResult = "NORMAL_REQUEST"
 	}
 
 	response := shared.GW_ResponseBody{
