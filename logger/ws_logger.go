@@ -56,7 +56,7 @@ type (
 		SQLInjectionDetection          bool    `json:"sql_injection_detection"`
 		HttpVerbTamperingDetection     bool    `json:"http_verb_tampering_detection"`
 		HttpLargeRequestDetection      bool    `json:"http_large_request_detection"`
-		UnknowAttackDetection          bool    `json:"unknow_attack_detection"`
+		UnknownAttackDetection         bool    `json:"unknown_attack_detection"`
 	}
 
 	Timestamps struct {
@@ -185,7 +185,7 @@ func Log(level string, log_data map[string]interface{}) {
 			SQLInjectionDetection:          getBoolOrDefault(log_data, "sql_injection_detection", false),
 			HttpVerbTamperingDetection:     getBoolOrDefault(log_data, "http_verb_tampering_detection", false),
 			HttpLargeRequestDetection:      getBoolOrDefault(log_data, "http_large_request_detection", false),
-			UnknowAttackDetection:          getBoolOrDefault(log_data, "unknow_attack_detection", false),
+			UnknownAttackDetection:         getBoolOrDefault(log_data, "unknown_attack_detection", false),
 		},
 		Message: log_data["message"].(string),
 		RawRequest: func() interface{} {
@@ -230,6 +230,6 @@ func Log(level string, log_data map[string]interface{}) {
 	} else if UPPER_LOG_LEVEL == "TRACE" {
 		logger.Trace(string(jsonData))
 	} else {
-		logger.Println("Unknown log level:", string(jsonData))
+		logger.Println("Unknownn log level:", string(jsonData))
 	}
 }

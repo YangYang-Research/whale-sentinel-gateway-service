@@ -176,7 +176,7 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 		sqlInjectionDetection                                            bool
 		httpVerbTamperingDetection                                       bool
 		httpLargeRequestDetection                                        bool
-		unknowAttackDetection                                            bool
+		unknownAttackDetection                                           bool
 		wg                                                               sync.WaitGroup
 		webAttackDetectionErr, commonAttackDetectionErr, dgaDetectionErr error
 	)
@@ -194,7 +194,7 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer wg.Done()
 		if cad["enable"].(bool) {
-			crossSiteScriptingDetection, sqlInjectionDetection, httpVerbTamperingDetection, httpLargeRequestDetection, unknowAttackDetection, commonAttackDetectionErr = processCommonAttackDetection(req, eventInfo, cad)
+			crossSiteScriptingDetection, sqlInjectionDetection, httpVerbTamperingDetection, httpLargeRequestDetection, unknownAttackDetection, commonAttackDetectionErr = processCommonAttackDetection(req, eventInfo, cad)
 		}
 	}()
 
@@ -235,14 +235,14 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 			"sql_injection_detection":        sqlInjectionDetection,
 			"http_verb_tampering_detection":  httpVerbTamperingDetection,
 			"http_large_request_detection":   httpLargeRequestDetection,
-			"unknow_attack_detection":        unknowAttackDetection,
+			"unknown_attack_detection":       unknownAttackDetection,
 		},
 	}
 	wadThreshold := int(wad["threshold"].(float64))
 	dgaThreshold := int(dgad["threshold"].(float64))
 	var analysisResult string
 	if webAttackDetectionPredictScore >= float64(wadThreshold) || DGADetectionPredictScore >= float64(dgaThreshold) ||
-		crossSiteScriptingDetection || sqlInjectionDetection || httpVerbTamperingDetection || httpLargeRequestDetection || unknowAttackDetection {
+		crossSiteScriptingDetection || sqlInjectionDetection || httpVerbTamperingDetection || httpLargeRequestDetection || unknownAttackDetection {
 		analysisResult = "ABNORMAL_REQUEST"
 	} else {
 		analysisResult = "NORMAL_REQUEST"
@@ -284,7 +284,7 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 			"sql_injection_detection":            sqlInjectionDetection,
 			"http_verb_tampering_detection":      httpVerbTamperingDetection,
 			"http_large_request_detection":       httpLargeRequestDetection,
-			"unknow_attack_detection":            unknowAttackDetection,
+			"unknown_attack_detection":           unknownAttackDetection,
 			"request_created_at":                 req.RequestCreatedAt,
 			"request_processed_at":               time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 			"message":                            "Analysis completed successfully.",
@@ -406,7 +406,7 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 			DetectSqlInjection:       cad["detect_sql_injection"].(bool),
 			DetectHTTPVerbTampering:  cad["detect_http_verb_tampering"].(bool),
 			DetectHTTPLargeRequest:   cad["detect_http_large_request"].(bool),
-			DetectUnknowAttack:       cad["detect_unknow_attack"].(bool),
+			DetectUnknownAttack:      cad["detect_unknown_attack"].(bool),
 		},
 		SecureResponseHeaders: shared.SecureResponseHeaderConfig{
 			Enable:        srh["enable"].(bool),
@@ -798,7 +798,7 @@ func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _
 		data["sql_injection_detection"].(bool),
 		data["http_verb_tampering_detection"].(bool),
 		data["http_large_request_detection"].(bool),
-		data["unknow_attack_detection"].(bool),
+		data["unknown_attack_detection"].(bool),
 		nil
 }
 
@@ -924,11 +924,11 @@ func processAgentSynchronize(req shared.AS_RequestBody, eventInfo string) (strin
 		"event_info": eventInfo,
 		"payload": map[string]interface{}{
 			"data": map[string]interface{}{
-				"type":       "agent",
-				"name":       req.AS_Payload.AS_Data.AgentName,
-				"id":         req.AS_Payload.AS_Data.AgentID,
-				"profile":    req.AS_Payload.AS_Data.AS_Profile,
-				"ip_address": req.AS_Payload.AS_Data.IPAddress,
+				"type":             "agent",
+				"name":             req.AS_Payload.AS_Data.AgentName,
+				"id":               req.AS_Payload.AS_Data.AgentID,
+				"profile":          req.AS_Payload.AS_Data.AS_Profile,
+				"host_information": req.AS_Payload.AS_Data.HostInformation,
 			},
 		},
 		"request_created_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),

@@ -53,7 +53,7 @@ func ValidateAS_Request(req shared.AS_RequestBody) error {
 		return fmt.Errorf("invalid timestamp format")
 	}
 
-	ip := req.AS_Payload.AS_Data.IPAddress
+	ip := req.AS_Payload.AS_Data.HostInformation.IPAddress
 	if ip != "" && net.ParseIP(ip) == nil {
 		return fmt.Errorf("invalid IP address format")
 	}
