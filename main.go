@@ -177,6 +177,8 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 		httpVerbTamperingDetection                                       bool
 		httpLargeRequestDetection                                        bool
 		unknownAttackDetection                                           bool
+		insecureFileUploadDetection                                      bool
+		insecureRedirectDetection                                        bool
 		wg                                                               sync.WaitGroup
 		webAttackDetectionErr, commonAttackDetectionErr, dgaDetectionErr error
 	)
@@ -194,7 +196,7 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer wg.Done()
 		if cad["enable"].(bool) {
-			crossSiteScriptingDetection, sqlInjectionDetection, httpVerbTamperingDetection, httpLargeRequestDetection, unknownAttackDetection, commonAttackDetectionErr = processCommonAttackDetection(req, eventInfo, cad)
+			crossSiteScriptingDetection, sqlInjectionDetection, httpVerbTamperingDetection, httpLargeRequestDetection, unknownAttackDetection, insecureFileUploadDetection, insecureRedirectDetection, commonAttackDetectionErr = processCommonAttackDetection(req, eventInfo, cad)
 		}
 	}()
 
@@ -236,13 +238,15 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 			"http_verb_tampering_detection":  httpVerbTamperingDetection,
 			"http_large_request_detection":   httpLargeRequestDetection,
 			"unknown_attack_detection":       unknownAttackDetection,
+			"insecure_file_upload_detection": insecureFileUploadDetection,
+			"insecure_redirect_detection":    insecureRedirectDetection,
 		},
 	}
 	wadThreshold := int(wad["threshold"].(float64))
 	dgaThreshold := int(dgad["threshold"].(float64))
 	var analysisResult string
 	if webAttackDetectionPredictScore >= float64(wadThreshold) || DGADetectionPredictScore >= float64(dgaThreshold) ||
-		crossSiteScriptingDetection || sqlInjectionDetection || httpVerbTamperingDetection || httpLargeRequestDetection || unknownAttackDetection {
+		crossSiteScriptingDetection || sqlInjectionDetection || httpVerbTamperingDetection || httpLargeRequestDetection || unknownAttackDetection || insecureFileUploadDetection || insecureRedirectDetection {
 		analysisResult = "ABNORMAL_REQUEST"
 	} else {
 		analysisResult = "NORMAL_REQUEST"
@@ -407,6 +411,8 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 			DetectHTTPVerbTampering:  cad["detect_http_verb_tampering"].(bool),
 			DetectHTTPLargeRequest:   cad["detect_http_large_request"].(bool),
 			DetectUnknownAttack:      cad["detect_unknown_attack"].(bool),
+			DetectInsecureFileUpload: cad["detect_insecure_file_upload"].(bool),
+			DetectInsecureRedirect:   cad["detect_insecure_redirect"].(bool),
 		},
 		SecureResponseHeaders: shared.SecureResponseHeaderConfig{
 			Enable:        srh["enable"].(bool),
@@ -566,6 +572,9 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 			DetectSqlInjection:       cad["detect_sql_injection"].(bool),
 			DetectHTTPVerbTampering:  cad["detect_http_verb_tampering"].(bool),
 			DetectHTTPLargeRequest:   cad["detect_http_large_request"].(bool),
+			DetectUnknownAttack:      cad["detect_unknown_attack"].(bool),
+			DetectInsecureFileUpload: cad["detect_insecure_file_upload"].(bool),
+			DetectInsecureRedirect:   cad["detect_insecure_redirect"].(bool),
 		},
 		SecureResponseHeaders: shared.SecureResponseHeaderConfig{
 			Enable:        srh["enable"].(bool),
@@ -740,7 +749,7 @@ func processWebAttackDetection(req shared.GW_RequestBody, eventInfo string, wad 
 	return score, nil
 }
 
-func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _ map[string]interface{}) (bool, bool, bool, bool, bool, error) {
+func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _ map[string]interface{}) (bool, bool, bool, bool, bool, bool, bool, error) {
 	log.WithFields(logrus.Fields{
 		"msg": "Event Info: " + eventInfo,
 	}).Debug("Processing Common Attack Detection")
@@ -771,6 +780,7 @@ func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _
 					},
 					"query_parameters": req.GW_Payload.GW_Data.HTTPRequest.QueryParams,
 					"body":             req.GW_Payload.GW_Data.HTTPRequest.Body,
+					"files":            req.GW_Payload.GW_Data.HTTPRequest.Files,
 				},
 			},
 		},
@@ -779,12 +789,12 @@ func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _
 
 	responseData, err := makeHTTPRequest(os.Getenv("WS_MODULE_COMMON_ATTACK_DETECTION_URL"), os.Getenv("WS_MODULE_COMMON_ATTACK_DETECTION_ENDPOINT"), requestBody)
 	if err != nil {
-		return false, false, false, false, false, err
+		return false, false, false, false, false, false, false, err
 	}
 
 	var response map[string]interface{}
 	if err := json.Unmarshal(responseData, &response); err != nil {
-		return false, false, false, false, false, fmt.Errorf("failed to parse response data: %v", err)
+		return false, false, false, false, false, false, false, fmt.Errorf("failed to parse response data: %v", err)
 	}
 
 	//Debug: Log the response JSON
@@ -799,6 +809,8 @@ func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _
 		data["http_verb_tampering_detection"].(bool),
 		data["http_large_request_detection"].(bool),
 		data["unknown_attack_detection"].(bool),
+		data["insecure_file_upload_detection"].(bool),
+		data["insecure_redirect_detection"].(bool),
 		nil
 }
 

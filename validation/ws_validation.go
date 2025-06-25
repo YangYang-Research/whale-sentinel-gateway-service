@@ -11,7 +11,11 @@ import (
 
 // Helper functions
 func ValidateGW_Request(req shared.GW_RequestBody) error {
-	if req.GW_Payload.GW_Data.ClientInformation.IP == "" || req.GW_Payload.GW_Data.HTTPRequest.Method == "" || req.GW_Payload.GW_Data.HTTPRequest.URL == "" || req.GW_Payload.GW_Data.HTTPRequest.Headers.UserAgent == "" || req.GW_Payload.GW_Data.HTTPRequest.Headers.ContentType == "" {
+	if req.GW_Payload.GW_Data.ClientInformation == (shared.ClientInformation{}) ||
+		req.GW_Payload.GW_Data.HTTPRequest.Method == "" ||
+		req.GW_Payload.GW_Data.HTTPRequest.URL == "" ||
+		req.GW_Payload.GW_Data.HTTPRequest.Host == "" ||
+		req.GW_Payload.GW_Data.HTTPRequest.Headers == (shared.HTTPRequestHeader{}) {
 		return fmt.Errorf("missing required fields")
 	}
 

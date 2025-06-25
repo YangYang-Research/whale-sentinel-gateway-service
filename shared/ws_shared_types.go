@@ -30,7 +30,9 @@ type (
 	HTTPRequest struct {
 		Method      string            `json:"method"`
 		URL         string            `json:"url"`
+		Scheme      string            `json:"scheme"`
 		Host        string            `json:"host"`
+		Endpoint    string            `json:"endpoint"`
 		Headers     HTTPRequestHeader `json:"headers"`
 		QueryParams string            `json:"query_parameters"`
 		Body        string            `json:"body"`
@@ -206,6 +208,8 @@ type (
 		DetectHTTPVerbTampering  bool `json:"detect_http_verb_tampering"`
 		DetectHTTPLargeRequest   bool `json:"detect_http_large_request"`
 		DetectUnknownAttack      bool `json:"detect_unknown_attack"`
+		DetectInsecureFileUpload bool `json:"detect_insecure_file_upload"`
+		DetectInsecureRedirect   bool `json:"detect_insecure_redirect"`
 	}
 
 	SecureResponseHeaderConfig struct {
