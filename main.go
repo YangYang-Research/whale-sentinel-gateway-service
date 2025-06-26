@@ -776,7 +776,7 @@ func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _
 						"user-agent":     req.GW_Payload.GW_Data.HTTPRequest.Headers.UserAgent,
 						"content-type":   req.GW_Payload.GW_Data.HTTPRequest.Headers.ContentType,
 						"content-length": req.GW_Payload.GW_Data.HTTPRequest.Headers.ContentLength,
-						"referer":        req.GW_Payload.GW_Data.HTTPRequest.Headers.Referer,
+						"referrer":       req.GW_Payload.GW_Data.HTTPRequest.Headers.Referrer,
 					},
 					"query_parameters": req.GW_Payload.GW_Data.HTTPRequest.QueryParams,
 					"body":             req.GW_Payload.GW_Data.HTTPRequest.Body,
@@ -819,9 +819,9 @@ func processDGADetection(req shared.GW_RequestBody, eventInfo string, _ map[stri
 		"msg": "Event Info: " + eventInfo,
 	}).Debug("Processing DGA Detection")
 
-	refererURL := req.GW_Payload.GW_Data.HTTPRequest.Headers.Referer
+	referrerURL := req.GW_Payload.GW_Data.HTTPRequest.Headers.Referrer
 
-	domain, err := helper.GetDomain(refererURL)
+	domain, err := helper.GetDomain(referrerURL)
 	if err != nil {
 		return 0, err
 	}
