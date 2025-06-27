@@ -85,6 +85,12 @@ func handlerRedis(key string, value string) (string, error) {
 	}
 }
 
+func handlerHealth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"ok"}`))
+}
+
 // handleGateway processes incoming requests
 func handleGateway(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -1017,10 +1023,12 @@ func main() {
 	logCompression, _ := strconv.ParseBool(os.Getenv("LOG_COMPRESSION"))
 	logger.SetupWSLogger("ws-gateway-service", logMaxSize, logMaxBackups, logMaxAge, logCompression)
 	// Wrap the handler with a 30-second timeout
+	timeoutHandlerHealth := http.TimeoutHandler(http.HandlerFunc(handlerHealth), 30*time.Second, "Request time out")
 	timeoutHandlerGW := http.TimeoutHandler(apiKeyAuthMiddleware(http.HandlerFunc(handleGateway)), 30*time.Second, "Request timed out")
 	timeOutHandlerAP := http.TimeoutHandler(apiKeyAuthMiddleware(http.HandlerFunc(HandleAgentProfile)), 30*time.Second, "Request timed out")
 	timeOutHandlerAS := http.TimeoutHandler(apiKeyAuthMiddleware(http.HandlerFunc(HandleAgentSynchronize)), 30*time.Second, "Request timed out")
 	// Register the timeout handler
+	http.Handle("/health", timeoutHandlerHealth)
 	http.Handle("/api/v1/ws/services/gateway", timeoutHandlerGW)
 	http.Handle("/api/v1/ws/services/gateway/agent/profile", timeOutHandlerAP)
 	http.Handle("/api/v1/ws/services/gateway/agent/synchronize", timeOutHandlerAS)
