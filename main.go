@@ -85,6 +85,12 @@ func handlerRedis(key string, value string) (string, error) {
 	}
 }
 
+func handlerHealth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"ok"}`))
+}
+
 // handleGateway processes incoming requests
 func handleGateway(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -176,7 +182,9 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 		sqlInjectionDetection                                            bool
 		httpVerbTamperingDetection                                       bool
 		httpLargeRequestDetection                                        bool
-		unknowAttackDetection                                            bool
+		unknownAttackDetection                                           bool
+		insecureFileUploadDetection                                      bool
+		insecureRedirectDetection                                        bool
 		wg                                                               sync.WaitGroup
 		webAttackDetectionErr, commonAttackDetectionErr, dgaDetectionErr error
 	)
@@ -194,7 +202,7 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer wg.Done()
 		if cad["enable"].(bool) {
-			crossSiteScriptingDetection, sqlInjectionDetection, httpVerbTamperingDetection, httpLargeRequestDetection, unknowAttackDetection, commonAttackDetectionErr = processCommonAttackDetection(req, eventInfo, cad)
+			crossSiteScriptingDetection, sqlInjectionDetection, httpVerbTamperingDetection, httpLargeRequestDetection, unknownAttackDetection, insecureFileUploadDetection, insecureRedirectDetection, commonAttackDetectionErr = processCommonAttackDetection(req, eventInfo, cad)
 		}
 	}()
 
@@ -235,14 +243,16 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 			"sql_injection_detection":        sqlInjectionDetection,
 			"http_verb_tampering_detection":  httpVerbTamperingDetection,
 			"http_large_request_detection":   httpLargeRequestDetection,
-			"unknow_attack_detection":        unknowAttackDetection,
+			"unknown_attack_detection":       unknownAttackDetection,
+			"insecure_file_upload_detection": insecureFileUploadDetection,
+			"insecure_redirect_detection":    insecureRedirectDetection,
 		},
 	}
 	wadThreshold := int(wad["threshold"].(float64))
 	dgaThreshold := int(dgad["threshold"].(float64))
 	var analysisResult string
 	if webAttackDetectionPredictScore >= float64(wadThreshold) || DGADetectionPredictScore >= float64(dgaThreshold) ||
-		crossSiteScriptingDetection || sqlInjectionDetection || httpVerbTamperingDetection || httpLargeRequestDetection || unknowAttackDetection {
+		crossSiteScriptingDetection || sqlInjectionDetection || httpVerbTamperingDetection || httpLargeRequestDetection || unknownAttackDetection || insecureFileUploadDetection || insecureRedirectDetection {
 		analysisResult = "ABNORMAL_REQUEST"
 	} else {
 		analysisResult = "NORMAL_REQUEST"
@@ -284,7 +294,7 @@ func handleGateway(w http.ResponseWriter, r *http.Request) {
 			"sql_injection_detection":            sqlInjectionDetection,
 			"http_verb_tampering_detection":      httpVerbTamperingDetection,
 			"http_large_request_detection":       httpLargeRequestDetection,
-			"unknow_attack_detection":            unknowAttackDetection,
+			"unknown_attack_detection":           unknownAttackDetection,
 			"request_created_at":                 req.RequestCreatedAt,
 			"request_processed_at":               time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 			"message":                            "Analysis completed successfully.",
@@ -406,7 +416,9 @@ func HandleAgentProfile(w http.ResponseWriter, r *http.Request) {
 			DetectSqlInjection:       cad["detect_sql_injection"].(bool),
 			DetectHTTPVerbTampering:  cad["detect_http_verb_tampering"].(bool),
 			DetectHTTPLargeRequest:   cad["detect_http_large_request"].(bool),
-			DetectUnknowAttack:       cad["detect_unknow_attack"].(bool),
+			DetectUnknownAttack:      cad["detect_unknown_attack"].(bool),
+			DetectInsecureFileUpload: cad["detect_insecure_file_upload"].(bool),
+			DetectInsecureRedirect:   cad["detect_insecure_redirect"].(bool),
 		},
 		SecureResponseHeaders: shared.SecureResponseHeaderConfig{
 			Enable:        srh["enable"].(bool),
@@ -566,6 +578,9 @@ func HandleAgentSynchronize(w http.ResponseWriter, r *http.Request) {
 			DetectSqlInjection:       cad["detect_sql_injection"].(bool),
 			DetectHTTPVerbTampering:  cad["detect_http_verb_tampering"].(bool),
 			DetectHTTPLargeRequest:   cad["detect_http_large_request"].(bool),
+			DetectUnknownAttack:      cad["detect_unknown_attack"].(bool),
+			DetectInsecureFileUpload: cad["detect_insecure_file_upload"].(bool),
+			DetectInsecureRedirect:   cad["detect_insecure_redirect"].(bool),
 		},
 		SecureResponseHeaders: shared.SecureResponseHeaderConfig{
 			Enable:        srh["enable"].(bool),
@@ -740,7 +755,7 @@ func processWebAttackDetection(req shared.GW_RequestBody, eventInfo string, wad 
 	return score, nil
 }
 
-func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _ map[string]interface{}) (bool, bool, bool, bool, bool, error) {
+func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _ map[string]interface{}) (bool, bool, bool, bool, bool, bool, bool, error) {
 	log.WithFields(logrus.Fields{
 		"msg": "Event Info: " + eventInfo,
 	}).Debug("Processing Common Attack Detection")
@@ -767,10 +782,11 @@ func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _
 						"user-agent":     req.GW_Payload.GW_Data.HTTPRequest.Headers.UserAgent,
 						"content-type":   req.GW_Payload.GW_Data.HTTPRequest.Headers.ContentType,
 						"content-length": req.GW_Payload.GW_Data.HTTPRequest.Headers.ContentLength,
-						"referer":        req.GW_Payload.GW_Data.HTTPRequest.Headers.Referer,
+						"referrer":       req.GW_Payload.GW_Data.HTTPRequest.Headers.Referrer,
 					},
 					"query_parameters": req.GW_Payload.GW_Data.HTTPRequest.QueryParams,
 					"body":             req.GW_Payload.GW_Data.HTTPRequest.Body,
+					"files":            req.GW_Payload.GW_Data.HTTPRequest.Files,
 				},
 			},
 		},
@@ -779,12 +795,12 @@ func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _
 
 	responseData, err := makeHTTPRequest(os.Getenv("WS_MODULE_COMMON_ATTACK_DETECTION_URL"), os.Getenv("WS_MODULE_COMMON_ATTACK_DETECTION_ENDPOINT"), requestBody)
 	if err != nil {
-		return false, false, false, false, false, err
+		return false, false, false, false, false, false, false, err
 	}
 
 	var response map[string]interface{}
 	if err := json.Unmarshal(responseData, &response); err != nil {
-		return false, false, false, false, false, fmt.Errorf("failed to parse response data: %v", err)
+		return false, false, false, false, false, false, false, fmt.Errorf("failed to parse response data: %v", err)
 	}
 
 	//Debug: Log the response JSON
@@ -798,7 +814,9 @@ func processCommonAttackDetection(req shared.GW_RequestBody, eventInfo string, _
 		data["sql_injection_detection"].(bool),
 		data["http_verb_tampering_detection"].(bool),
 		data["http_large_request_detection"].(bool),
-		data["unknow_attack_detection"].(bool),
+		data["unknown_attack_detection"].(bool),
+		data["insecure_file_upload_detection"].(bool),
+		data["insecure_redirect_detection"].(bool),
 		nil
 }
 
@@ -807,9 +825,9 @@ func processDGADetection(req shared.GW_RequestBody, eventInfo string, _ map[stri
 		"msg": "Event Info: " + eventInfo,
 	}).Debug("Processing DGA Detection")
 
-	refererURL := req.GW_Payload.GW_Data.HTTPRequest.Headers.Referer
+	referrerURL := req.GW_Payload.GW_Data.HTTPRequest.Headers.Referrer
 
-	domain, err := helper.GetDomain(refererURL)
+	domain, err := helper.GetDomain(referrerURL)
 	if err != nil {
 		return 0, err
 	}
@@ -924,11 +942,11 @@ func processAgentSynchronize(req shared.AS_RequestBody, eventInfo string) (strin
 		"event_info": eventInfo,
 		"payload": map[string]interface{}{
 			"data": map[string]interface{}{
-				"type":       "agent",
-				"name":       req.AS_Payload.AS_Data.AgentName,
-				"id":         req.AS_Payload.AS_Data.AgentID,
-				"profile":    req.AS_Payload.AS_Data.AS_Profile,
-				"ip_address": req.AS_Payload.AS_Data.IPAddress,
+				"type":             "agent",
+				"name":             req.AS_Payload.AS_Data.AgentName,
+				"id":               req.AS_Payload.AS_Data.AgentID,
+				"profile":          req.AS_Payload.AS_Data.AS_Profile,
+				"host_information": req.AS_Payload.AS_Data.HostInformation,
 			},
 		},
 		"request_created_at": time.Now().UTC().Format("2006-01-02T15:04:05Z"),
@@ -1005,10 +1023,12 @@ func main() {
 	logCompression, _ := strconv.ParseBool(os.Getenv("LOG_COMPRESSION"))
 	logger.SetupWSLogger("ws-gateway-service", logMaxSize, logMaxBackups, logMaxAge, logCompression)
 	// Wrap the handler with a 30-second timeout
+	timeoutHandlerHealth := http.TimeoutHandler(http.HandlerFunc(handlerHealth), 30*time.Second, "Request time out")
 	timeoutHandlerGW := http.TimeoutHandler(apiKeyAuthMiddleware(http.HandlerFunc(handleGateway)), 30*time.Second, "Request timed out")
 	timeOutHandlerAP := http.TimeoutHandler(apiKeyAuthMiddleware(http.HandlerFunc(HandleAgentProfile)), 30*time.Second, "Request timed out")
 	timeOutHandlerAS := http.TimeoutHandler(apiKeyAuthMiddleware(http.HandlerFunc(HandleAgentSynchronize)), 30*time.Second, "Request timed out")
 	// Register the timeout handler
+	http.Handle("/health", timeoutHandlerHealth)
 	http.Handle("/api/v1/ws/services/gateway", timeoutHandlerGW)
 	http.Handle("/api/v1/ws/services/gateway/agent/profile", timeOutHandlerAP)
 	http.Handle("/api/v1/ws/services/gateway/agent/synchronize", timeOutHandlerAS)

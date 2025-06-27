@@ -11,10 +11,11 @@ type (
 	}
 
 	GW_Data struct {
-		AgentID           string            `json:"agent_id"`
-		AgentName         string            `json:"agent_name"`
-		ClientInformation ClientInformation `json:"client_information"`
-		HTTPRequest       HTTPRequest       `json:"http_request"`
+		AgentID            string             `json:"agent_id"`
+		AgentName          string             `json:"agent_name"`
+		ClientInformation  ClientInformation  `json:"client_information"`
+		HTTPRequest        HTTPRequest        `json:"http_request"`
+		RunTimeInformation RunTimeInformation `json:"runtime_information"`
 	}
 
 	ClientInformation struct {
@@ -29,17 +30,47 @@ type (
 	HTTPRequest struct {
 		Method      string            `json:"method"`
 		URL         string            `json:"url"`
+		Scheme      string            `json:"scheme"`
 		Host        string            `json:"host"`
+		Endpoint    string            `json:"endpoint"`
 		Headers     HTTPRequestHeader `json:"headers"`
 		QueryParams string            `json:"query_parameters"`
 		Body        string            `json:"body"`
+		Files       []UploadedFile    `json:"files"`
 	}
 
 	HTTPRequestHeader struct {
 		UserAgent     string `json:"user-agent"`
 		ContentType   string `json:"content-type"`
 		ContentLength int    `json:"content-length"`
-		Referer       string `json:"referer"`
+		Referrer      string `json:"referrer"`
+	}
+
+	UploadedFile struct {
+		FileName    string `json:"file_name"`
+		FileSize    int    `json:"file_size"`
+		FileContent string `json:"file_content"`
+		FileType    string `json:"file_type"`
+		FileHash256 string `json:"file_hash256"`
+	}
+
+	RunTimeInformation struct {
+		IPAddress         string   `json:"ip_address"`
+		PID               int      `json:"pid"`
+		RunAs             string   `json:"run_as"`
+		ExecutablePath    string   `json:"executable_path"`
+		ExecutableName    string   `json:"executable_name"`
+		ExecutableVersion string   `json:"executable_version"`
+		ProcessName       string   `json:"process_name"`
+		ProcessPath       string   `json:"process_path"`
+		ProcessCommand    []string `json:"process_command"`
+		Platform          string   `json:"platform"`
+		CPUUsage          float64  `json:"cpu_usage"`
+		MemoryUsage       float64  `json:"memory_usage"`
+		Architecture      string   `json:"architecture"`
+		OSVersion         string   `json:"os_version"`
+		OSName            string   `json:"os_name"`
+		OSBuild           string   `json:"os_build"`
 	}
 
 	AP_RequestBody struct {
@@ -99,10 +130,34 @@ type (
 	}
 
 	AS_Data struct {
-		AgentID    string                 `json:"agent_id"`
-		AgentName  string                 `json:"agent_name"`
-		AS_Profile map[string]interface{} `json:"profile"`
-		IPAddress  string                 `json:"ip_address"`
+		AgentID         string          `json:"agent_id"`
+		AgentName       string          `json:"agent_name"`
+		AS_Profile      AS_Profile      `json:"profile"`
+		HostInformation HostInformation `json:"host_information"`
+	}
+
+	AS_Profile struct {
+		LiteModeDataIsSynchronized    bool   `json:"lite_mode_data_is_synchronized"`
+		LiteModeDataSynchronizeStatus string `json:"lite_mode_data_synchronize_status"`
+	}
+
+	HostInformation struct {
+		IPAddress         string   `json:"ip_address"`
+		PID               int      `json:"pid"`
+		RunAs             string   `json:"run_as"`
+		ExecutablePath    string   `json:"executable_path"`
+		ExecutableName    string   `json:"executable_name"`
+		ExecutableVersion string   `json:"executable_version"`
+		ProcessName       string   `json:"process_name"`
+		ProcessPath       string   `json:"process_path"`
+		ProcessCommand    []string `json:"process_command"`
+		Platform          string   `json:"platform"`
+		CPUUsage          float64  `json:"cpu_usage"`
+		MemoryUsage       float64  `json:"memory_usage"`
+		Architecture      string   `json:"architecture"`
+		OSVersion         string   `json:"os_version"`
+		OSName            string   `json:"os_name"`
+		OSBuild           string   `json:"os_build"`
 	}
 
 	AS_ResponseBody struct {
@@ -152,7 +207,9 @@ type (
 		DetectSqlInjection       bool `json:"detect_sql_injection"`
 		DetectHTTPVerbTampering  bool `json:"detect_http_verb_tampering"`
 		DetectHTTPLargeRequest   bool `json:"detect_http_large_request"`
-		DetectUnknowAttack       bool `json:"detect_unknow_attack"`
+		DetectUnknownAttack      bool `json:"detect_unknown_attack"`
+		DetectInsecureFileUpload bool `json:"detect_insecure_file_upload"`
+		DetectInsecureRedirect   bool `json:"detect_insecure_redirect"`
 	}
 
 	SecureResponseHeaderConfig struct {
