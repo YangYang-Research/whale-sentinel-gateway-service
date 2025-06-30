@@ -16,6 +16,20 @@ Key Functions:
 
 ✅ System Synchronization & Intelligence – By continuously syncing profile statuses and security configurations, it supports a proactive security posture, allowing seamless coordination between Agents and the WS system.
 
-## Contributing
+---
 
-## License
+## 🤝 Contributing
+
+We welcome contributions and feedback. Please fork the repository and open a pull request with your suggested changes.
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## 🛡️ Security & Reporting
+
+If you discover a vulnerability, please report it responsibly via GitHub Issues or contact the maintainers privately.
